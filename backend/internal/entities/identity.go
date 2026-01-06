@@ -10,6 +10,7 @@ import (
 type Identity struct {
 	ID uuid.UUID
 	UserID uuid.UUID
+	User User
 	Type string
 	ExternalID string
 	Issuer string

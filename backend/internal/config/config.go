@@ -27,6 +27,10 @@ type (
 		Port string
 		SSLMode string
 	}
+
+	Hash struct {
+		Cost int
+	}
 )
 
 var (
@@ -53,6 +57,8 @@ func GetConfig() *Config {
 		viper.SetDefault("postgres.host", "db")
 		viper.SetDefault("postgres.password", "")
 		viper.SetDefault("postgres.sslmode", "disable")
+
+		viper.SetDefault("hash.cost", 10)
 
 		if err := viper.ReadInConfig(); err != nil {
 			if _, ok := err.(viper.ConfigFileNotFoundError); !ok {

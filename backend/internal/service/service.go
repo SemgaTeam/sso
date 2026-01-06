@@ -43,6 +43,10 @@ func (s *service) Register(input RegisterInput) (*entities.User, error) {
 		panic("only email registration supported")
 	}
 
+	if input.Password == "" {
+		return nil, e.EmptyPasswordIsNotPermitted
+	}
+
 	_, err := s.userRepo.ByEmail(input.Email)
 
 	if err != nil {

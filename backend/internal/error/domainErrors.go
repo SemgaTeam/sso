@@ -34,6 +34,7 @@ var (
 	UserNotFound = NewDomainError("user not found")
 
 	InvalidCredentials = NewDomainError("invalid credentials")
+	EmptyPasswordIsNotPermitted = NewDomainError("empty password is not permitted")
 
 	SigningMethodNotAllowed = NewDomainError("token signing method is not allowed")
 	SigningTokenError = NewDomainError("error signing token")

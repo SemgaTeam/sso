@@ -2,6 +2,7 @@ package error
 
 import (
 	"errors"
+	"fmt"
 )
 
 type DomainError struct {
@@ -24,7 +25,7 @@ func NewDomainError(msg string) *DomainError {
 
 func Unknown(err error) *DomainError {
 	return &DomainError{
-		Err: err,
+		Err: fmt.Errorf("unknown error: %s", err.Error()),
 	}
 }
 
@@ -36,4 +37,7 @@ var (
 
 	SigningMethodNotAllowed = NewDomainError("token signing method is not allowed")
 	SigningTokenError = NewDomainError("error signing token")
+
+	IdentityAlreadyExists = NewDomainError("identity already exists")
+	CredentialAlreadyExists = NewDomainError("credential already exists")
 )

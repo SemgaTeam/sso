@@ -26,6 +26,7 @@ type (
 		Host string
 		Port string
 		SSLMode string
+		MigrationsPath string `mapstructure:"migrationsPath"`
 	}
 
 	Hash struct {
@@ -57,6 +58,7 @@ func GetConfig() *Config {
 		viper.SetDefault("postgres.host", "db")
 		viper.SetDefault("postgres.password", "")
 		viper.SetDefault("postgres.sslmode", "disable")
+		viper.SetDefault("postgres.migrationsPath", "migrations")
 
 		viper.SetDefault("hash.cost", 10)
 

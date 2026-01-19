@@ -8,7 +8,7 @@ import (
 )
 
 type AuditEvent struct {
-	ID uuid.UUID
+	ID uuid.UUID `gorm:"primaryKey"`
 	Type string
 	UserID uuid.UUID
 	User User

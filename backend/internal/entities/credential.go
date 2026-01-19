@@ -7,7 +7,7 @@ import (
 )
 
 type Credential struct {
-	ID uuid.UUID
+	ID uuid.UUID `gorm:"primaryKey"`
 	IdentityID uuid.UUID
 	Identity Identity
 	Type string

@@ -7,7 +7,7 @@ import (
 )
 
 type Session struct {
-	ID uuid.UUID
+	ID uuid.UUID `gorm:"primaryKey"`
 	UserID uuid.UUID
 	User User
 	CreatedAt time.Time

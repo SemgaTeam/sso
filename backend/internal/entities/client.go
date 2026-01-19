@@ -7,7 +7,7 @@ import (
 )
 
 type Client struct {
-	ID uuid.UUID
+	ID uuid.UUID `gorm:"primaryKey"`
 	Name string
 	ClientID string
 	ClientSecret string

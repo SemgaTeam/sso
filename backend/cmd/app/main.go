@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/SemgaTeam/sso/internal/db"
+	"github.com/SemgaTeam/sso/internal/infrastructure/db"
 	"github.com/SemgaTeam/sso/internal/config"
 
 	"fmt"
@@ -9,8 +9,8 @@ import (
 
 func main() {
 	conf := config.GetConfig()
-	migrationPath := "migrations"
-	if err := db.RunMigrations(conf.Postgres, migrationPath); err != nil {
+
+	if err := db.RunMigrations(conf.Postgres); err != nil {
 		panic(err)
 	}
 

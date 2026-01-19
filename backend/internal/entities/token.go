@@ -7,7 +7,7 @@ import (
 )
 
 type Token struct {
-	ID uuid.UUID
+	ID uuid.UUID `gorm:"primaryKey"`
 	SubjectUserID uuid.UUID
 	User User `gorm:"foreignKey:SubjectUserID"`
 	ClientID uuid.UUID

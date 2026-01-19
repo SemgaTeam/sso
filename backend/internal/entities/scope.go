@@ -5,7 +5,7 @@ import (
 )
 
 type Scope struct {
-	ID uuid.UUID
+	ID uuid.UUID `gorm:"primaryKey"`
 	Name string
 	Description string
 }

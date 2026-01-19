@@ -1,4 +1,4 @@
-package repository
+package infrastructure
 
 import (
 	"github.com/SemgaTeam/sso/internal/config"
@@ -30,7 +30,7 @@ func (r *hashRepository) HashPassword(raw string) (string, error) {
 	return string(bytes), nil
 }
 
-func (r *hashRepository) PasswordValid(rawPassword, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(rawPassword))
+func (r *hashRepository) PasswordValid(raw, hashed string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hashed), []byte(raw))
 	return err == nil
 }

@@ -41,7 +41,7 @@ func TestRegister(t *testing.T) {
 				mockUserRepo.
 					EXPECT().
 					ByEmail(gomock.Eq("user@example.com")).
-					Return(nil, e.UserNotFound)
+					Return(nil, nil)
 
 				mockHashRepo.
 					EXPECT().
@@ -78,7 +78,7 @@ func TestRegister(t *testing.T) {
 				mockUserRepo.
 					EXPECT().
 					ByEmail(gomock.Eq("user@example.com")).
-					Return(nil, e.UserNotFound)
+					Return(nil, nil)
 
 				mockHashRepo.
 					EXPECT().
@@ -133,7 +133,7 @@ func TestRegister(t *testing.T) {
 				mockUserRepo.
 					EXPECT().
 					ByEmail(gomock.Eq("user@example.com")).
-					Return(nil, e.UserNotFound)
+					Return(nil, nil)
 
 				mockHashRepo.
 					EXPECT().
@@ -154,7 +154,7 @@ func TestRegister(t *testing.T) {
 				mockUserRepo.
 					EXPECT().
 					ByEmail(gomock.Eq("user@example.com")).
-					Return(nil, e.UserNotFound)
+					Return(nil, nil)
 
 				mockHashRepo.
 					EXPECT().
@@ -180,7 +180,7 @@ func TestRegister(t *testing.T) {
 				mockUserRepo.
 					EXPECT().
 					ByEmail(gomock.Eq("user@example.com")).
-					Return(nil, e.UserNotFound)
+					Return(nil, nil)
 
 				mockHashRepo.
 					EXPECT().
@@ -211,7 +211,7 @@ func TestRegister(t *testing.T) {
 				mockUserRepo.
 					EXPECT().
 					ByEmail(gomock.Eq("user@example.com")).
-					Return(nil, e.UserNotFound)
+					Return(nil, nil)
 
 				mockHashRepo.
 					EXPECT().

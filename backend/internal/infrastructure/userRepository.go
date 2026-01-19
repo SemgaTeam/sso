@@ -57,8 +57,12 @@ func (r *UserRepository) AddCredential(credential *entities.Credential) error {
 
 func (r *UserRepository) ByID(id uuid.UUID) (*entities.User, error) {
 	var user entities.User
-	if err := r.db.First(&user, "id = ?", id).Error; err != nil {
-		return nil, e.Unknown(err)
+	if err := r.db.Preload("Identities.Credentials").Take(&user, "id = ?", id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		} else {
+			return nil, e.Unknown(err)
+		}
 	}
 
 	return &user, nil
@@ -66,8 +70,12 @@ func (r *UserRepository) ByID(id uuid.UUID) (*entities.User, error) {
 
 func (r *UserRepository) ByEmail(email string) (*entities.User, error) {
 	var user entities.User
-	if err := r.db.First(&user, "email = ?", email).Error; err != nil {
-		return nil, e.Unknown(err)
+	if err := r.db.Preload("Identities.Credentials").Take(&user, "email = ?", email).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		} else {
+			return nil, e.Unknown(err)
+		}
 	}
 
 	return &user, nil
@@ -75,8 +83,12 @@ func (r *UserRepository) ByEmail(email string) (*entities.User, error) {
 
 func (r *UserRepository) ByIdentity(itype, external_id, issuer string) (*entities.User, error) {
 	var user entities.User
-	if err := r.db.First(&user, "type = ? AND external_id = ? AND issuer = ?", itype, external_id, issuer).Error; err != nil {
-		return nil, e.Unknown(err)
+	if err := r.db.Preload("Identities.Credentials").Take(&user, "type = ? AND external_id = ? AND issuer = ?", itype, external_id, issuer).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		} else {
+			return nil, e.Unknown(err)
+		}
 	}
 
 	return &user, nil

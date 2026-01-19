@@ -12,4 +12,5 @@ type User struct {
 	Email string
 	Status string
 	CreatedAt time.Time
+	Identities []Identity
 }

@@ -16,4 +16,5 @@ type Identity struct {
 	Issuer string
 	Attributes datatypes.JSON
 	CreatedAt time.Time
+	Credentials []Credential
 }

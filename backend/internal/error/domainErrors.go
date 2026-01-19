@@ -40,5 +40,7 @@ var (
 	SigningTokenError = NewDomainError("error signing token")
 
 	IdentityAlreadyExists = NewDomainError("identity already exists")
+	IdentityNotExists = NewDomainError("identity does not exist")
 	CredentialAlreadyExists = NewDomainError("credential already exists")
+	CredentialNotExists = NewDomainError("credential does not exist")
 )

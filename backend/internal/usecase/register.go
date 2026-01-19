@@ -24,15 +24,13 @@ func (uc *RegisterUseCase) Execute(input domain.RegisterInput) (*entities.User, 
 		panic("only email registration supported")
 	}
 
-	_, err := uc.user.ByEmail(input.Email)
-
-	switch err {
-	case e.UserNotFound:
-		break
-	case nil:
-		return nil, e.UserAlreadyExists
-	default:
+	existingUser, err := uc.user.ByEmail(input.Email)
+	if err != nil {
 		return nil, err
+	}
+
+	if existingUser != nil {
+		return nil, e.UserAlreadyExists
 	}
 
 	hash, err := uc.hash.HashPassword(input.Password)

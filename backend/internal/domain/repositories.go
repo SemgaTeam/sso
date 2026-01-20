@@ -20,3 +20,8 @@ type HashRepository interface {
 	PasswordValid(raw string, hashed string) bool
 }
 
+type ConsentRepository interface {
+	Save(userID, clientID uuid.UUID, scopes []string) error
+	HasConsent(userID, clientID uuid.UUID) bool
+	ClientScopes(clientID uuid.UUID) ([]string, error)
+}

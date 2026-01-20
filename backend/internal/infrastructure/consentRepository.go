@@ -31,12 +31,30 @@ func (r *ConsentRepository) Save(userID, clientID uuid.UUID, scopes []string) er
 	return nil
 }
 
-func (r *ConsentRepository) HasConsent(userID, clientID uuid.UUID) bool {
+func (r *ConsentRepository) HasConsent(userID, clientID uuid.UUID, scopes []string) bool {
 	var consent entities.Consent
 
 	err := r.db.Where("user_id = ? AND client_id = ?", userID, clientID).Take(&consent).Error
+	if err != nil {
+		return false
+	}
 
-	return (err == nil)
+	subset := true
+	for _, inputScope := range scopes {
+		inScopes := false
+		for	_, scope := range consent.Scopes {
+			if inputScope == scope {
+				inScopes = true
+			}	
+		} 
+
+		if !inScopes {
+			subset = false
+			break
+		}
+	}
+
+	return subset
 }
 
 func (r *ConsentRepository) ClientScopes(clientID uuid.UUID) ([]string, error) {

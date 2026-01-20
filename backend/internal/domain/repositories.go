@@ -22,6 +22,6 @@ type HashRepository interface {
 
 type ConsentRepository interface {
 	Save(userID, clientID uuid.UUID, scopes []string) error
-	HasConsent(userID, clientID uuid.UUID) bool
+	HasConsent(userID, clientID uuid.UUID, scopes []string) bool
 	ClientScopes(clientID uuid.UUID) ([]string, error)
 }

@@ -25,3 +25,13 @@ type ConsentRepository interface {
 	HasConsent(userID, clientID uuid.UUID, scopes []string) bool
 	ClientScopes(clientID uuid.UUID) ([]string, error)
 }
+
+type ClientRepository interface {
+	ByID(id uuid.UUID) (*entities.Client, error)
+}
+
+type AuthCodeRepository interface {
+	Issue(user_id, client_id uuid.UUID, redirect_uri, scope string, ttl uint) (string, error)
+	Get(code string) (user_id, client_id uuid.UUID, redirect_uri, scope string, err error) 
+	Delete(code string) error
+}

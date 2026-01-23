@@ -14,6 +14,9 @@ const (
 	AuthorizationApproved        AuthResultType = "approved"
 	AuthorizationConsentRequired AuthResultType = "consent_required"
 	AuthorizationDenied          AuthResultType = "denied"
+
+	ExchangeTokensSuccess        AuthResultType = "exchange tokens success"
+	ExchangeTokensFailure        AuthResultType = "exchange tokens failure"
 )
 
 type AuthResult struct {
@@ -23,61 +26,79 @@ type AuthResult struct {
 	RedirectURI string
 
 	Consent dto.ConsentView
+
+	AccessToken string
+	RefreshToken string
 }
 
 type AuthService struct {
 	authenticateUC AuthenticateUC
 	registerUC RegisterUC
+	exchangeTokensUC ExchangeTokensUC
 	consent domain.ConsentRepository
 	client domain.ClientRepository
 	authCode domain.AuthCodeRepository
 }
 
-func (s *AuthService) Execute(input domain.AuthInput) (*AuthResult, error) {
-	authCodeTTL := uint(5*60) // 5 minutes
+func (s *AuthService) LogIn(input domain.AuthInput) (*AuthResult, error) {
+	usecaseInput := domain.AuthenticateInput{
+		Email: input.Email,
+		Password: input.Password,
 
-	var user *entities.User
-	var err error
-	switch input.Intent {
-	case domain.IntentLogin:
-		input := domain.AuthenticateInput{
-			Email: input.Email,
-			Password: input.Password,
+		Provider: input.Provider,
 
-			Provider: input.Provider,
+		ExternalID: input.ExternalID,
+		Token: input.Token,
+		Issuer: input.Issuer,
+	}
 
-			ExternalID: input.ExternalID,
-			Token: input.Token,
-			Issuer: input.Issuer,
-		}
+	user, err := s.authenticateUC.Execute(usecaseInput)
+	if err != nil{
+		return nil, err
+	}
 
-		user, err = s.authenticateUC.Execute(input)
+	return s.continueOAuthWorkflow(user, input)
+}
 
-	case domain.IntentRegister:
-		input := domain.RegisterInput{
-			Name: input.Name,
-			Email: input.Email,
-			Password: input.Password,
+func (s *AuthService) Register(input domain.AuthInput) (*AuthResult, error) {
+	usecaseInput := domain.RegisterInput{
+		Name: input.Name,
+		Email: input.Email,
+		Password: input.Password,
 
-			Provider: input.Provider,
+		Provider: input.Provider,
 
-			ExternalID: input.ExternalID,
-			Token: input.Token,
-			Issuer: input.Issuer,
-		}
+		ExternalID: input.ExternalID,
+		Token: input.Token,
+		Issuer: input.Issuer,
+	}
 
-		user, err = s.registerUC.Execute(input)
+	user, err := s.registerUC.Execute(usecaseInput)
+	if err != nil{
+		return nil, err
+	}
 
-	default:
+	return s.continueOAuthWorkflow(user, input)
+}
+
+func (s *AuthService) ExchangeTokens(authCode string) (*AuthResult, error) {
+	access, refresh, err := s.exchangeTokensUC.Execute(authCode)	
+	if err != nil {
 		return &AuthResult{
-			Type: AuthorizationDenied,
-			Message: "invalid auth intent",
+			Type: ExchangeTokensFailure,
+			Message: err.Error(),
 		}, nil
 	}
 
-	if err != nil {
-		return nil, err
-	}
+	return &AuthResult{
+		Type: ExchangeTokensSuccess,
+		AccessToken: access,
+		RefreshToken: refresh,
+	}, nil
+}
+
+func (s *AuthService) continueOAuthWorkflow(user *entities.User, input domain.AuthInput) (*AuthResult, error) {
+	authCodeTTL := uint(5*60) // 5 minutes
 
 	client, err := s.client.ByID(input.ClientID)
 	if err != nil {

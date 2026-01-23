@@ -4,20 +4,12 @@ import (
 	"github.com/google/uuid"
 )
 
-type authIntent string
-
-const (
-	IntentLogin    			 authIntent = "login"
-	IntentRegister 			 authIntent = "register"
-	IntentExchangeTokens authIntent = "exchange tokens"
-)
-
 type AuthInput struct {
-	Intent authIntent	
-
 	ClientID uuid.UUID
 	Scopes []string
 	RedirectURI string
+
+	AuthCode string
 
 	Name string
 	Email string

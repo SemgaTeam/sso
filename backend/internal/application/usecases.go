@@ -12,3 +12,7 @@ type AuthenticateUC interface {
 type RegisterUC interface {
 	Execute(input domain.RegisterInput) (*entities.User, error)
 }
+
+type ExchangeTokensUC interface {
+	Execute(authCode string) (accessToken, refreshToken string, err error)
+}

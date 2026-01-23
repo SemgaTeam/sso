@@ -22,6 +22,21 @@ type HashRepository interface {
 
 type ConsentRepository interface {
 	Save(userID, clientID uuid.UUID, scopes []string) error
-	HasConsent(userID, clientID uuid.UUID) bool
+	HasConsent(userID, clientID uuid.UUID, scopes []string) bool
 	ClientScopes(clientID uuid.UUID) ([]string, error)
+}
+
+type ClientRepository interface {
+	ByID(id uuid.UUID) (*entities.Client, error)
+}
+
+type AuthCodeRepository interface {
+	Save(*entities.AuthCode) (code string, err error)
+	Get(code string) (*entities.AuthCode, error) 
+	Delete(code string) error
+}
+
+type TokenRepository interface {
+	SaveAccess(token *entities.Token) error
+	SaveRefresh(token *entities.Token) error
 }

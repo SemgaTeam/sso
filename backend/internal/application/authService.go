@@ -126,12 +126,25 @@ func (s *AuthService) continueOAuthWorkflow(user *entities.User, input domain.Au
 	}
 
 	scope := strings.Join(input.Scopes, " ")
-	authCode, err := s.authCode.Issue(user.ID, client.ID, input.RedirectURI, scope, authCodeTTL)
+
+	authCode, err := domain.NewAuthCode(
+		user.ID,
+		client.ID,
+		input.RedirectURI,
+		scope,
+		authCodeTTL,
+	)
+
 	if err != nil {
 		return nil, err
 	}
 
-	redirectURI := input.RedirectURI + "?code=" + authCode
+	code, err := s.authCode.Save(authCode)
+	if err != nil {
+		return nil, err
+	}
+
+	redirectURI := input.RedirectURI + "?code=" + code
 
 	return &AuthResult{
 		Type: AuthorizationApproved,

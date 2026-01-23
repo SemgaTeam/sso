@@ -43,4 +43,6 @@ var (
 	IdentityNotExists = NewDomainError("identity does not exist")
 	CredentialAlreadyExists = NewDomainError("credential already exists")
 	CredentialNotExists = NewDomainError("credential does not exist")
+
+	AuthCodeNotFound = NewDomainError("auth code not found")
 )

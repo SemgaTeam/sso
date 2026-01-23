@@ -31,7 +31,12 @@ type ClientRepository interface {
 }
 
 type AuthCodeRepository interface {
-	Issue(user_id, client_id uuid.UUID, redirect_uri, scope string, ttl uint) (string, error)
-	Get(code string) (user_id, client_id uuid.UUID, redirect_uri, scope string, err error) 
+	Save(*entities.AuthCode) (code string, err error)
+	Get(code string) (*entities.AuthCode, error) 
 	Delete(code string) error
+}
+
+type TokenRepository interface {
+	SaveAccess(token *entities.Token) error
+	SaveRefresh(token *entities.Token) error
 }

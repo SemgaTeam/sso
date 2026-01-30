@@ -39,45 +39,14 @@ func (uc *RegisterUseCase) Execute(ctx context.Context, input RegisterInput) (st
 
 	switch input.Provider {
 	case "email":
-		user, err = NewUser(input.Name, input.Email)
-		if err != nil {
-			return "", err
-		}
-
-		hashed, err := uc.hash.HashPassword(input.Password)
-		if err != nil {
-			return "", err
-		}
-
-		identity, err := NewIdentity(user.ID, "email", user.Email, "sso.semgateam.ru")
-		if err != nil {
-			return "", err
-		}
-
-		credential, err := NewCredential("password", hashed)
-		if err != nil {
-			return "", err
-		}
-
-		err = uc.user.Create(ctx, user)
-		if err != nil {
-			return "", err
-		}
-
-		if err := uc.user.SaveIdentity(ctx, identity); err != nil {
-			return "", err
-		}
-
-		credential.IdentityID = identity.ID
-		if err := uc.user.SaveCredential(ctx, credential); err != nil {
-			return "", err
-		}
+		user, err = uc.registerByEmail(ctx, input)
 	
 	case "oauth":
 		user, err = uc.googleOAuth(ctx, input)
-		if err != nil {
-			return "", err
-		}
+	}
+
+	if err != nil {
+		return "", err
 	}
 
 	sessionTokenExp := 3600
@@ -148,6 +117,44 @@ func (uc *RegisterUseCase) googleOAuth(ctx context.Context, input RegisterInput)
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	return user, nil
+}
+
+func (uc *RegisterUseCase) registerByEmail(ctx context.Context, input RegisterInput) (*User, error) {
+	user, err := NewUser(input.Name, input.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	hashed, err := uc.hash.HashPassword(input.Password)
+	if err != nil {
+		return nil, err
+	}
+
+	identity, err := NewIdentity(user.ID, "email", user.Email, "sso.semgateam.ru")
+	if err != nil {
+		return nil, err
+	}
+
+	credential, err := NewCredential("password", hashed)
+	if err != nil {
+		return nil, err
+	}
+
+	err = uc.user.Create(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := uc.user.SaveIdentity(ctx, identity); err != nil {
+		return nil, err
+	}
+
+	credential.IdentityID = identity.ID
+	if err := uc.user.SaveCredential(ctx, credential); err != nil {
+		return nil, err
 	}
 
 	return user, nil

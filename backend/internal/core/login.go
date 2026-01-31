@@ -101,10 +101,11 @@ func (uc *LoginUseCase) googleOAuth(ctx context.Context, input LoginInput) (*Use
 			}
 		} 
 
-		identity, err := NewIdentity(user.ID, input.Provider, input.ExternalID, input.Issuer)
+		identity, err := NewIdentity(input.Provider, input.ExternalID, input.Issuer)
 		if err != nil {
 			return nil, err
 		}
+		identity.ID = user.ID
 
 		credential, err := NewCredential("oauth", payload["raw"])
 		if err != nil {
@@ -115,6 +116,7 @@ func (uc *LoginUseCase) googleOAuth(ctx context.Context, input LoginInput) (*Use
 		if err != nil {
 			return nil, err
 		}
+		credential.IdentityID = identity.ID
 
 		err = uc.user.SaveCredential(ctx, credential)
 		if err != nil {

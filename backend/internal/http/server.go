@@ -10,6 +10,7 @@ import (
 
 	"net/http"
 	"errors"
+	"log"
 )
 
 func SetupHandlers(e *echo.Echo, pool *pgxpool.Pool, userUC *core.UserUseCase, loginUC *core.LoginUseCase, registerUC *core.RegisterUseCase, oauthWorkflow *core.OAuthWorkflow) {
@@ -96,24 +97,48 @@ func SetupHandlers(e *echo.Echo, pool *pgxpool.Pool, userUC *core.UserUseCase, l
 
 	auth.POST("/login", func(c echo.Context) error {
 		ctx := c.Request().Context()
+		params := c.QueryParams()
 
-		request := map[string]string{
-			"email": "",
-			"password": "",
+		if params["provider"] == nil {
+			return errors.New("provider query parameter is not specified")
+		}
+		if len(params["provider"]) > 1 {
+			return errors.New("provider query parameter must be of length 1")
 		}
 
-		if err := c.Bind(&request); err != nil {
-			return err
-		}
+		provider := params["provider"][0]
+		var input core.LoginInput
 
-		input := core.LoginInput{
-			Provider: "email",
-			Email: request["email"],
-			Password: request["password"],
+		switch provider {
+		case "email":
+			request := map[string]string{
+				"email": "",
+				"password": "",
+			}
+			if err := c.Bind(&request); err != nil {
+				return err
+			}
+			
+			input = core.LoginInput{
+				Provider: "email",
+				Email: request["email"],
+				Password: request["password"],
+			}
+		case "oauth":
+			idToken := c.Get("id_token").(map[string]string)
+
+			input = core.LoginInput{
+				Provider: "oauth",
+				
+				Issuer: idToken["issuer"],
+				ExternalID: idToken["sub"],
+				Token: idToken,
+			}
 		}
 
 		token, err := loginUC.Execute(ctx, input)
 		if err != nil {
+			log.Printf("%v", err)
 			return err
 		}
 

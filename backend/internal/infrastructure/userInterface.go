@@ -164,7 +164,7 @@ func (i *UserInterface) Update(ctx context.Context, user *core.User) error {
 func (i *UserInterface) SaveIdentity(ctx context.Context, identity *core.Identity) error {
 	if identity.ID != "" {
 		_, err := i.pool.Exec(ctx, 
-			"UPDATE TABLE identities SET user_id = $1, type = $2, external_id = $3, issuer = $4 WHERE id = $5",
+			"UPDATE identities SET user_id = $1, type = $2, external_id = $3, issuer = $4 WHERE id = $5",
 			identity.UserID, identity.Type, identity.ExternalID, identity.Issuer, identity.ID,
 		)
 
@@ -173,7 +173,7 @@ func (i *UserInterface) SaveIdentity(ctx context.Context, identity *core.Identit
 
 	var id string
 	err := i.pool.QueryRow(ctx, 
-		"INSERT INTO TABLE identities(user_id, type, external_id, issuer) VALUES ($1, $2, $3, $4) RETURNING id",
+		"INSERT INTO identities(user_id, type, external_id, issuer) VALUES ($1, $2, $3, $4) RETURNING id",
 		identity.UserID, identity.Type, identity.ExternalID, identity.Issuer,
 	).Scan(&id)
 
@@ -189,7 +189,7 @@ func (i *UserInterface) SaveIdentity(ctx context.Context, identity *core.Identit
 func (i *UserInterface) SaveCredential(ctx context.Context, credential *core.Credential) error {
 	if credential.ID != "" { 
 		_, err := i.pool.Exec(ctx, 
-			"UPDATE TABLE credentials SET hash = $1, status = $2 WHERE id = $3",
+			"UPDATE credentials SET hash = $1, status = $2 WHERE id = $3",
 			credential.Hash, credential.Status, credential.ID,
 		)
 
@@ -197,11 +197,10 @@ func (i *UserInterface) SaveCredential(ctx context.Context, credential *core.Cre
 	} 
 
 	var id string
-	var status string
 	err := i.pool.QueryRow(ctx, 
-		"INSERT INTO TABLE credentials(identity_id, type, hash) VALUES ($1, $2, $3) RETURNING id",
+		"INSERT INTO credentials(identity_id, type, hash) VALUES ($1, $2, $3) RETURNING id",
 		credential.IdentityID, credential.Type, credential.Hash,
-	).Scan(&id, &status)
+	).Scan(&id)
 
 	if err != nil {
 		return err
@@ -224,7 +223,7 @@ func (i *UserInterface) preload(ctx context.Context, user *core.User) error {
 
 	for identityRows.Next() {
 		var identity core.Identity
-		err := identityRows.Scan(identity.ID, identity.Type, identity.ExternalID, identity.Issuer, identity.CreatedAt)
+		err := identityRows.Scan(&identity.ID, &identity.Type, &identity.ExternalID, &identity.Issuer, &identity.CreatedAt)
 		if err != nil {
 			return err
 		}
@@ -242,7 +241,7 @@ func (i *UserInterface) preload(ctx context.Context, user *core.User) error {
 
 		for credentialRows.Next() {
 			var cred core.Credential
-			err := credentialRows.Scan(cred.ID, cred.Type, cred.Hash, cred.Status, cred.CreatedAt)
+			err := credentialRows.Scan(&cred.ID, &cred.Type, &cred.Hash, &cred.Status, &cred.CreatedAt)
 			if err != nil {
 				return err
 			}

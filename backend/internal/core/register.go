@@ -98,10 +98,11 @@ func (uc *RegisterUseCase) googleOAuth(ctx context.Context, input RegisterInput)
 			}
 		} 
 
-		identity, err := NewIdentity(user.ID, input.Provider, input.ExternalID, input.Issuer)
+		identity, err := NewIdentity(input.Provider, input.ExternalID, input.Issuer)
 		if err != nil {
 			return nil, err
 		}
+		identity.UserID = user.ID
 
 		credential, err := NewCredential("oauth", payload["raw"])
 		if err != nil {
@@ -112,6 +113,7 @@ func (uc *RegisterUseCase) googleOAuth(ctx context.Context, input RegisterInput)
 		if err != nil {
 			return nil, err
 		}
+		credential.IdentityID = identity.ID
 
 		err = uc.user.SaveCredential(ctx, credential)
 		if err != nil {
@@ -133,7 +135,7 @@ func (uc *RegisterUseCase) registerByEmail(ctx context.Context, input RegisterIn
 		return nil, err
 	}
 
-	identity, err := NewIdentity(user.ID, "email", user.Email, "sso.semgateam.ru")
+	identity, err := NewIdentity("email", user.Email, "sso.semgateam.ru")
 	if err != nil {
 		return nil, err
 	}
@@ -147,6 +149,8 @@ func (uc *RegisterUseCase) registerByEmail(ctx context.Context, input RegisterIn
 	if err != nil {
 		return nil, err
 	}
+
+	identity.UserID = user.ID
 
 	if err := uc.user.SaveIdentity(ctx, identity); err != nil {
 		return nil, err

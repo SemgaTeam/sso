@@ -14,9 +14,8 @@ type Identity struct {
 	Credentials []Credential
 }
 
-func NewIdentity(userID, itype, externalID, issuer string) (*Identity, error) {
+func NewIdentity(itype, externalID, issuer string) (*Identity, error) {
 	return &Identity{
-		UserID: userID,
 		Type: itype,
 		ExternalID: externalID,
 		Issuer: issuer,

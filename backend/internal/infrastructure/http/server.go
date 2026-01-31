@@ -10,7 +10,6 @@ import (
 
 	"net/http"
 	"errors"
-	"log"
 )
 
 func SetupHandlers(e *echo.Echo, pool *pgxpool.Pool, userUC *core.UserUseCase, loginUC *core.LoginUseCase, registerUC *core.RegisterUseCase, oauthWorkflow *core.OAuthWorkflow) {
@@ -140,7 +139,6 @@ func SetupHandlers(e *echo.Echo, pool *pgxpool.Pool, userUC *core.UserUseCase, l
 
 		token, err := loginUC.Execute(ctx, input)
 		if err != nil {
-			log.Printf("%v", err)
 			return err
 		}
 

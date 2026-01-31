@@ -2,8 +2,8 @@ package main
 
 import (
 	"sso/internal/core"
-	"sso/internal/http"
 	"sso/internal/infrastructure"
+	"sso/internal/infrastructure/http"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"

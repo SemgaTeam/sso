@@ -1,35 +1,16 @@
-package core
+package test
 
 import (
 	"github.com/stretchr/testify/require"
+	"sso/internal/core"
 
 	"context"
-	"fmt"
 	"testing"
 	"time"
 )
 
-type FakeClientRepository struct {
-	clients []Client
-}
-
-func (r *FakeClientRepository) ByID(ctx context.Context, id string) (*Client, error) {
-	for _, c := range r.clients {
-		if c.ClientID == id {
-			return &c, nil
-		}
-	}
-
-	return nil, nil
-}
-
-type FakeTokenRepository struct {}
-func (r *FakeTokenRepository) Generate(claims *Claims) (string, error) {
-	return fmt.Sprintf("%v", claims), nil
-}
-
 func TestOAuthWorkflowSuccess(t *testing.T) {
-	clients := []Client{
+	clients := []core.Client{
 		{
 			ID: "1",
 			Name: "test1",
@@ -48,7 +29,7 @@ func TestOAuthWorkflowSuccess(t *testing.T) {
 	accessExpiration := 60*60
 	refreshExpiration := 60*60*24
 
-	oauthWorkflow := NewOAuthWorkflow(clientRepo, tokenRepo, accessExpiration, refreshExpiration)
+	oauthWorkflow := core.NewOAuthWorkflow(clientRepo, tokenRepo, accessExpiration, refreshExpiration)
 
 	ctx := context.Background()
 	userID := "user_id"

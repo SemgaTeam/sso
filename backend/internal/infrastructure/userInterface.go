@@ -228,8 +228,6 @@ func (i *UserInterface) preload(ctx context.Context, user *core.User) error {
 			return err
 		}
 
-		user.Identities = append(user.Identities, identity)
-
 		credentialRows, err := i.pool.Query(ctx, 
 			"SELECT id, type, hash, status, created_at FROM credentials WHERE identity_id = $1",
 			identity.ID,
@@ -248,6 +246,8 @@ func (i *UserInterface) preload(ctx context.Context, user *core.User) error {
 
 			identity.Credentials = append(identity.Credentials, cred)
 		}
+
+		user.Identities = append(user.Identities, identity)
 	}
 
 	return nil

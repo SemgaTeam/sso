@@ -6,6 +6,7 @@ import (
 	"context"
 	"time"
 	"errors"
+	"log"
 )
 
 type LoginUseCase struct {
@@ -132,6 +133,8 @@ func (uc *LoginUseCase) loginByEmail(ctx context.Context, input LoginInput) (*Us
 	if err != nil {
 		return nil, err
 	}
+
+	log.Printf("%v", user.Identities)
 
 	var emailIdentity *Identity
 	for _, id := range user.Identities {

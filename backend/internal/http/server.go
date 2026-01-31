@@ -24,6 +24,8 @@ func SetupHandlers(e *echo.Echo, pool *pgxpool.Pool, userUC *core.UserUseCase, l
 		SigningMethod: jwt.SigningMethodHS256.Alg(),
 	})
 
+	e.HTTPErrorHandler = errorHandler
+
 	user.GET("/", func(c echo.Context) error {
 		ctx := c.Request().Context()
 
@@ -237,4 +239,12 @@ func SetupHandlers(e *echo.Echo, pool *pgxpool.Pool, userUC *core.UserUseCase, l
 		})
 
 	}, tokenMiddleware)
+}
+
+func errorHandler(err error, c echo.Context) {
+	if !c.Response().Committed {
+		c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+	}
 }

@@ -11,6 +11,7 @@ type Identity struct {
 	ExternalID string
 	Issuer string
 	CreatedAt time.Time
+	Credentials []Credential
 }
 
 func NewIdentity(userID, itype, externalID, issuer string) (*Identity, error) {

@@ -2,9 +2,7 @@ package infrastructure
 
 import (
 	"sso/internal/core"
-
 	"github.com/jackc/pgx/v5/pgxpool"
-	"golang.org/x/crypto/bcrypt"
 
 	"context"
 )
@@ -39,6 +37,10 @@ func (i *UserInterface) ByID(ctx context.Context, id string) (*core.User, error)
 		Status: status,
 	}
 
+	if err := i.preload(ctx, &user); err != nil {
+		return nil, err
+	}
+
 	return &user, nil
 }
 
@@ -67,6 +69,10 @@ func (i *UserInterface) ByIdentity(ctx context.Context, itype, externalID, issue
 		Status: status,
 	}
 
+	if err := i.preload(ctx, &user); err != nil {
+		return nil, err
+	}
+
 	return &user, nil
 }
 
@@ -91,6 +97,10 @@ func (i *UserInterface) ByEmail(ctx context.Context, email string) (*core.User, 
 		Status: status,
 	}
 
+	if err := i.preload(ctx, &user); err != nil {
+		return nil, err
+	}
+
 	return &user, nil
 }
 
@@ -113,6 +123,10 @@ func (i *UserInterface) ByName(ctx context.Context, name string) (*core.User, er
 		Name: name,
 		Email: email,
 		Status: status,
+	}
+
+	if err := i.preload(ctx, &user); err != nil {
+		return nil, err
 	}
 
 	return &user, nil
@@ -147,20 +161,6 @@ func (i *UserInterface) Update(ctx context.Context, user *core.User) error {
 	return err
 }
 
-func (i *UserInterface) CheckPassword(ctx context.Context, userID, rawPassword string) error {
-	hash, err := i.getHash(ctx, userID)
-	if err != nil {
-		return err
-	}
-
-	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(rawPassword))		
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (i *UserInterface) SaveIdentity(ctx context.Context, identity *core.Identity) error {
 	if identity.ID != "" {
 		_, err := i.pool.Exec(ctx, 
@@ -186,36 +186,6 @@ func (i *UserInterface) SaveIdentity(ctx context.Context, identity *core.Identit
 	return nil
 }
 
-func (i *UserInterface) getHash(ctx context.Context, userID string) (string, error) {
-	row := i.pool.QueryRow(ctx, 
-		"SELECT hash FROM credentials WHERE user_id = $1",
-		userID,
-	)
-
-	var hash string
-	if err := row.Scan(&hash); err != nil {
-		return "", err
-	}
-
-	return hash, nil
-}
-
-func (i *UserInterface) SavePassword(ctx context.Context, userID, rawPassword string) error {
-	hashCost := 10
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(rawPassword), hashCost)	
-	if err != nil {
-		return err
-	}
-
-	_, err = i.pool.Exec(ctx, 
-		"INSERT INTO credentials(user_id, hash) VALUES ($1, $2)",
-		userID,
-		hashedPassword,
-	)
-
-	return err
-}
-
 func (i *UserInterface) SaveCredential(ctx context.Context, credential *core.Credential) error {
 	if credential.ID != "" { 
 		_, err := i.pool.Exec(ctx, 
@@ -238,6 +208,48 @@ func (i *UserInterface) SaveCredential(ctx context.Context, credential *core.Cre
 	}
 
 	credential.ID = id
+
+	return nil
+}
+
+func (i *UserInterface) preload(ctx context.Context, user *core.User) error {
+	identityRows, err := i.pool.Query(ctx, 
+		"SELECT id, type, external_id, issuer, created_at FROM identities WHERE user_id = $1",
+		user.ID,
+	)
+	if err != nil {
+		return err
+	}
+	defer identityRows.Close()
+
+	for identityRows.Next() {
+		var identity core.Identity
+		err := identityRows.Scan(identity.ID, identity.Type, identity.ExternalID, identity.Issuer, identity.CreatedAt)
+		if err != nil {
+			return err
+		}
+
+		user.Identities = append(user.Identities, identity)
+
+		credentialRows, err := i.pool.Query(ctx, 
+			"SELECT id, type, hash, status, created_at FROM credentials WHERE identity_id = $1",
+			identity.ID,
+		)
+		if err != nil {
+			return err
+		}
+		defer credentialRows.Close()
+
+		for credentialRows.Next() {
+			var cred core.Credential
+			err := credentialRows.Scan(cred.ID, cred.Type, cred.Hash, cred.Status, cred.CreatedAt)
+			if err != nil {
+				return err
+			}
+
+			identity.Credentials = append(identity.Credentials, cred)
+		}
+	}
 
 	return nil
 }

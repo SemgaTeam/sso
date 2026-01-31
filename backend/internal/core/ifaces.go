@@ -13,9 +13,6 @@ type IUser interface {
 	Create(ctx context.Context, user *User) error
 	Update(ctx context.Context, user *User) error
 
-	CheckPassword(ctx context.Context, userID, rawPassword string) error
-	SavePassword(ctx context.Context, userID, password string) error
-	
 	SaveIdentity(ctx context.Context, identity *Identity) error
 	SaveCredential(ctx context.Context, credential *Credential) error
 }

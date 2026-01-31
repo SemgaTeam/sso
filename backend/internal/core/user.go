@@ -10,6 +10,7 @@ type User struct {
 	Name string `json:"name"`
 	Email string `json:"email"`
 	Status string `json:"status"`
+	Identities []Identity
 }
 
 func NewUser(name, email string) (*User, error) {

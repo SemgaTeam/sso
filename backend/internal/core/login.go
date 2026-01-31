@@ -11,12 +11,14 @@ import (
 type LoginUseCase struct {
 	user IUser
 	token IToken
+	hash IHash
 }
 
-func NewLoginUseCase(user IUser, token IToken) *LoginUseCase {
+func NewLoginUseCase(user IUser, token IToken, hash IHash) *LoginUseCase {
 	return &LoginUseCase{
 		user,
 		token,
+		hash,
 	}
 }
 
@@ -37,19 +39,13 @@ func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInput) (string, 
 
 	switch input.Provider {
 	case "email":
-		user, err = uc.user.ByEmail(ctx, input.Email)
-		if err != nil {
-			return "", err
-		}
-
-		if err = uc.user.CheckPassword(ctx, user.ID, input.Password); err != nil {
-			return "", err
-		}
+		user, err = uc.loginByEmail(ctx, input)	
 	case "oauth":
 		user, err = uc.googleOAuth(ctx, input)
-		if err != nil {
-			return "", err
-		}
+	}
+
+	if err != nil {
+		return "", err
 	}
 
 	if !user.CanLogin() {
@@ -124,6 +120,42 @@ func (uc *LoginUseCase) googleOAuth(ctx context.Context, input LoginInput) (*Use
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	return user, nil
+}
+
+func (uc *LoginUseCase) loginByEmail(ctx context.Context, input LoginInput) (*User, error) {
+	user, err := uc.user.ByEmail(ctx, input.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	var emailIdentity *Identity
+	for _, id := range user.Identities {
+		if id.Type == "email" {
+			emailIdentity = &id
+			break
+		}
+	}
+
+	if emailIdentity == nil {
+		return nil, errors.New("no email identity")
+	}
+
+	var passwordCred *Credential
+	for _, cred := range emailIdentity.Credentials {
+		if cred.Type == "password" {
+			passwordCred = &cred
+		}
+	}
+
+	if passwordCred == nil {
+		return nil, errors.New("no password credential")
+	}
+
+	if err := uc.hash.CheckPassword(input.Password, passwordCred.Hash); err != nil {
+		return nil, err
 	}
 
 	return user, nil

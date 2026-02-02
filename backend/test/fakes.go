@@ -81,12 +81,16 @@ func (r *FakeUserRepository) ByName(ctx context.Context, name string) (*core.Use
 }
 
 func (r *FakeUserRepository) ByIdentity(ctx context.Context, itype, externalID, issuer string) (*core.User, error) {
-	for _, user := range r.users {
-		for _, id := range user.Identities {
-			if id.Type == itype && id.ExternalID == externalID && id.Issuer == issuer {
-				r.preload(&user)
-				return &user, nil
+	for _, id := range r.identities {
+		if id.Type == itype && id.ExternalID == externalID && id.Issuer == issuer {
+			user, err := r.ByID(ctx, id.UserID)
+			if err != nil {
+				return nil, err
 			}
+
+			r.preload(user)
+
+			return user, nil
 		}
 	}
 	

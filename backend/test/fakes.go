@@ -29,12 +29,29 @@ func (r *FakeTokenRepository) Generate(claims *core.Claims) (string, error) {
 
 type FakeUserRepository struct {
 	users []core.User
+	identities []core.Identity
+	credentials []core.Credential
+}
+
+func (r *FakeUserRepository) preload(user *core.User) {
+	for _, id := range r.identities {
+		if id.UserID == user.ID {
+			user.Identities = append(user.Identities, id)		
+			for _, cred := range r.credentials {
+				if cred.IdentityID == id.ID {
+					id.Credentials = append(id.Credentials, cred)
+				}
+			}
+		}
+	}
 }
 
 func (r *FakeUserRepository) ByID(ctx context.Context, id string) (*core.User, error) {
-	for _, user := range r.users {
-		if user.ID == id {
-			return &user, nil
+	for i := range r.users {
+		if r.users[i].ID == id {
+			user := &r.users[i]
+			r.preload(user)
+			return user, nil
 		}
 	}
 
@@ -44,6 +61,7 @@ func (r *FakeUserRepository) ByID(ctx context.Context, id string) (*core.User, e
 func (r *FakeUserRepository) ByEmail(ctx context.Context, email string) (*core.User, error) {
 	for _, user := range r.users {
 		if user.Email == email {
+			r.preload(&user)
 			return &user, nil
 		}
 	}
@@ -54,6 +72,7 @@ func (r *FakeUserRepository) ByEmail(ctx context.Context, email string) (*core.U
 func (r *FakeUserRepository) ByName(ctx context.Context, name string) (*core.User, error) {
 	for _, user := range r.users {
 		if user.Name == name {
+			r.preload(&user)
 			return &user, nil
 		}
 	}
@@ -65,6 +84,7 @@ func (r *FakeUserRepository) ByIdentity(ctx context.Context, itype, externalID, 
 	for _, user := range r.users {
 		for _, id := range user.Identities {
 			if id.Type == itype && id.ExternalID == externalID && id.Issuer == issuer {
+				r.preload(&user)
 				return &user, nil
 			}
 		}
@@ -74,7 +94,10 @@ func (r *FakeUserRepository) ByIdentity(ctx context.Context, itype, externalID, 
 }
 
 func (r *FakeUserRepository) Create(ctx context.Context, user *core.User) error {
+	user.ID = user.Name + user.Email
+
 	r.users = append(r.users, *user)
+
 	return nil
 }
 
@@ -95,34 +118,15 @@ func (r *FakeUserRepository) Update(ctx context.Context, u *core.User) error {
 }
 
 func (r *FakeUserRepository) SaveIdentity(ctx context.Context, identity *core.Identity) error {
-	user, err := r.ByID(ctx, identity.UserID)
-	if err != nil {
-		return err
-	}
+	identity.ID = identity.Type + identity.Issuer + identity.ExternalID
 
-	if user == nil {
-		return errors.New("user not found")
-	}
-
-	user.Identities = append(user.Identities, *identity)
+	r.identities = append(r.identities, *identity)
 
 	return nil
 }
+
 func (r *FakeUserRepository) SaveCredential(ctx context.Context, cred *core.Credential) error {
-	var identity *core.Identity
-
-	for _, user := range r.users {
-		for _, id := range user.Identities {
-			if id.ID == cred.IdentityID {
-				identity = &id
-			}
-		}
-	}
-	if identity == nil {
-		return errors.New("identity not found")
-	}
-
-	identity.Credentials = append(identity.Credentials, *cred)
+	r.credentials = append(r.credentials, *cred)
 
 	return nil
 }

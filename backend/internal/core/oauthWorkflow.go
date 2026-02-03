@@ -28,6 +28,10 @@ func (w *OAuthWorkflow) Execute(ctx context.Context, userID, clientID, redirectU
 		return "", "", err
 	}
 
+	if client == nil {
+		return "", "", errors.New("client not found")
+	}
+
 	if !client.AllowsRedirect(redirectURI) {
 		return "", "", errors.New("redirect uri is not allowed")
 	}

@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-func googleOAuth(ctx context.Context, userInterface IUser, email, rawToken, provider, externalID, issuer string) (*User, error) {
+func GoogleOAuth(ctx context.Context, userInterface IUser, email, rawToken, provider, externalID, issuer string) (*User, error) {
 	user, err := userInterface.ByIdentity(ctx, provider, externalID, issuer)	
 	if err != nil {
 		return nil, err

@@ -43,7 +43,7 @@ func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInput) (string, 
 	case "oauth":
 		token := input.Token
 		email := token["email"]
-		user, err = googleOAuth(ctx, uc.user, email, token["raw"], input.Provider, input.ExternalID, input.Issuer)
+		user, err = GoogleOAuth(ctx, uc.user, email, token["raw"], input.Provider, input.ExternalID, input.Issuer)
 	}
 
 	if err != nil {

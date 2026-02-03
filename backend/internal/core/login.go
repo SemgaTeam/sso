@@ -41,7 +41,9 @@ func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInput) (string, 
 	case "email":
 		user, err = uc.loginByEmail(ctx, input)	
 	case "oauth":
-		user, err = uc.googleOAuth(ctx, input)
+		token := input.Token
+		email := token["email"]
+		user, err = googleOAuth(ctx, uc.user, email, token["raw"], input.Provider, input.ExternalID, input.Issuer)
 	}
 
 	if err != nil {
@@ -69,62 +71,6 @@ func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInput) (string, 
 	ssoSessionToken, err := uc.token.Generate(&claims)
 
 	return ssoSessionToken, err
-}
-
-func (uc *LoginUseCase) googleOAuth(ctx context.Context, input LoginInput) (*User, error) {
-	payload := input.Token
-
-	email := payload["email"]
-
-	user, err := uc.user.ByIdentity(ctx, input.Provider, input.ExternalID, input.Issuer)	
-	if err != nil {
-		return nil, err
-	}
-
-	if user == nil {
-		user, err = uc.user.ByEmail(ctx, email)	
-		if err != nil {
-			return nil, err
-		}
-
-		if user == nil {
-			name := email	
-
-			user, err = NewUser(name, email)
-			if err != nil {
-				return nil, err
-			}
-
-			err = uc.user.Create(ctx, user)
-			if err != nil {
-				return nil, err
-			}
-		} 
-
-		identity, err := NewIdentity(input.Provider, input.ExternalID, input.Issuer)
-		if err != nil {
-			return nil, err
-		}
-		identity.ID = user.ID
-
-		credential, err := NewCredential("oauth", payload["raw"])
-		if err != nil {
-			return nil, err
-		}
-
-		err = uc.user.SaveIdentity(ctx, identity)
-		if err != nil {
-			return nil, err
-		}
-		credential.IdentityID = identity.ID
-
-		err = uc.user.SaveCredential(ctx, credential)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return user, nil
 }
 
 func (uc *LoginUseCase) loginByEmail(ctx context.Context, input LoginInput) (*User, error) {

@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"crypto/rsa"
 )
 
 type IUser interface {
@@ -28,4 +29,8 @@ type IToken interface {
 type IHash interface {
 	HashPassword(raw string) (string, error)
 	CheckPassword(raw, hash string) error
+}
+
+type IPrivateKeys interface {
+	GetPrivateKeys() ([]rsa.PrivateKey, error)
 }

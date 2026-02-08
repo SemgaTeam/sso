@@ -12,7 +12,7 @@ import (
 	"errors"
 )
 
-func SetupHandlers(e *echo.Echo, pool *pgxpool.Pool, userUC *core.UserUseCase, loginUC *core.LoginUseCase, registerUC *core.RegisterUseCase, oauthWorkflow *core.OAuthWorkflow) {
+func SetupHandlers(e *echo.Echo, pool *pgxpool.Pool, userUC *core.UserUseCase, loginUC *core.LoginUseCase, registerUC *core.RegisterUseCase, oauthWorkflow *core.OAuthWorkflow, jwksUC *core.GetPublicKeysUseCase) {
 	auth := e.Group("/auth")
 
 	tokenMiddleware := echojwt.WithConfig(echojwt.Config{
@@ -165,6 +165,15 @@ func SetupHandlers(e *echo.Echo, pool *pgxpool.Pool, userUC *core.UserUseCase, l
 		})
 
 	}, tokenMiddleware)
+
+	e.GET("/.well-known/jwks.json", func(c echo.Context) error {
+		keys, err := jwksUC.Execute()
+		if err != nil {
+			return err
+		}
+
+		return c.JSON(http.StatusOK, keys)
+	})
 }
 
 func errorHandler(err error, c echo.Context) {

@@ -53,16 +53,18 @@ func main() {
 	tokenInterface := infrastructure.NewTokenInterface(signingKey, signingMethod)
 	userInterface := infrastructure.NewUserInterface(pool)
 	hashInterface := infrastructure.NewHashInterface(10)
+	keysInterface := infrastructure.NewKeyInterface()
 
-	oauthWorkflow := core.NewOAuthWorkflow(clientInterface, tokenInterface, accessTokenExpiration, refreshTokenExpiration)
+	oauthWorkflow := core.NewOAuthWorkflow(clientInterface, tokenInterface, keysInterface, accessTokenExpiration, refreshTokenExpiration)
 
 	loginUC := core.NewLoginUseCase(userInterface, tokenInterface, hashInterface)
 	registerUC := core.NewRegisterUseCase(userInterface, tokenInterface, hashInterface)
 	userUC := core.NewUserUseCase(userInterface)
+	jwksUC := core.NewJWKSUseCase(keysInterface)
 
 	e := echo.New()
 
-	http.SetupHandlers(e, pool, userUC, loginUC, registerUC, oauthWorkflow)	
+	http.SetupHandlers(e, pool, userUC, loginUC, registerUC, oauthWorkflow, jwksUC)	
 
 	e.Logger.Fatal(e.Start(":8080"))
 }

@@ -10,6 +10,12 @@ type GetPublicKeysUseCase struct {
 	keys IPrivateKeys
 }
 
+func NewJWKSUseCase(keys IPrivateKeys) *GetPublicKeysUseCase {
+	return &GetPublicKeysUseCase{
+		keys,
+	}
+}
+
 func (uc *GetPublicKeysUseCase) Execute() (JWKS, error) {
 	privateKeys, err := uc.keys.GetPrivateKeys()
 	if err != nil {

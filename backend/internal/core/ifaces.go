@@ -23,6 +23,7 @@ type IClient interface {
 
 type IToken interface {
 	Generate(claims *Claims) (string, error)
+	SignWithKey(claims *Claims, key PrivateKey) (string, error)
 }
 
 type IHash interface {

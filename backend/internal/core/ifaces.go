@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"crypto/rsa"
 )
 
 type IUser interface {

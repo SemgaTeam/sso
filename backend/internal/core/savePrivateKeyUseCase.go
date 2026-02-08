@@ -1,15 +1,17 @@
 package core
 
+import "crypto/rsa"
+
 type SavePrivateKeyUseCase struct {
 	keys IPrivateKeys
 }
 
 type PrivateKey struct {
-	Value string
+	Value rsa.PrivateKey
 	Name string
 }
 
-func (uc *SavePrivateKeyUseCase) Execute(value string, name string) error {
+func (uc *SavePrivateKeyUseCase) Execute(value rsa.PrivateKey, name string) error {
 	key := PrivateKey{
 		Value: value,
 		Name: name,

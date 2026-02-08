@@ -16,7 +16,7 @@ func (uc *GetPublicKeysUseCase) Execute() ([]rsa.PublicKey, error) {
 
 	var publicKeys []rsa.PublicKey
 	for _, key := range privateKeys {
-		publicKeys = append(publicKeys, key.PublicKey)
+		publicKeys = append(publicKeys, key.Value.PublicKey)
 	}
 
 	return publicKeys, nil

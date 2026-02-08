@@ -32,6 +32,7 @@ type IHash interface {
 }
 
 type IPrivateKeys interface {
-	GetPrivateKeys() ([]rsa.PrivateKey, error)
+	GetPrivateKeys() ([]PrivateKey, error)
 	SavePrivateKey(*PrivateKey) error
+	Generate(name string) (*PrivateKey, error)
 }

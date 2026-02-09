@@ -4,7 +4,6 @@ import (
 	"sso/internal/core"
 	"sso/internal/infrastructure"
 	"sso/internal/infrastructure/http"
-
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -54,6 +53,12 @@ func main() {
 	userInterface := infrastructure.NewUserInterface(pool)
 	hashInterface := infrastructure.NewHashInterface(10)
 	keysInterface := infrastructure.NewKeyInterface()
+
+	privateKey, err := keysInterface.Generate("test_key")
+	if err != nil {
+		panic("error generating private key " + err.Error())
+	}
+	keysInterface.SavePrivateKey(privateKey)
 
 	oauthWorkflow := core.NewOAuthWorkflow(clientInterface, tokenInterface, keysInterface, accessTokenExpiration, refreshTokenExpiration)
 

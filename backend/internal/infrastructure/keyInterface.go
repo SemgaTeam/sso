@@ -12,18 +12,8 @@ type KeyInterface struct {
 }
 
 func NewKeyInterface() *KeyInterface {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return nil
-	}
-	
 	return &KeyInterface{
-		keys: []core.PrivateKey{
-			{
-				Value: *privateKey,
-				Name: "test_private_key",
-			},
-		},
+		keys: []core.PrivateKey{},
 	}
 }
 

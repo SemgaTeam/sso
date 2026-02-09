@@ -1,13 +1,14 @@
 package test
 
 import (
+	"github.com/golang-jwt/jwt/v5"
 	"sso/internal/core"
 
+	"crypto/rand"
+	"crypto/rsa"
 	"context"
 	"errors"
 	"fmt"
-
-	"github.com/golang-jwt/jwt/v5"
 )
 
 type FakeClientRepository struct {
@@ -38,6 +39,37 @@ func (r *FakeTokenRepository) SignWithKey(claims *core.Claims, key core.PrivateK
 	}
 
 	return signed, nil
+}
+
+type FakeKeyRepository struct {
+	keys []core.PrivateKey
+}
+
+func (r *FakeKeyRepository) GetPrivateKeys() ([]core.PrivateKey, error) {
+	return r.keys, nil
+}
+
+func (r *FakeKeyRepository) SavePrivateKey(key *core.PrivateKey) error {
+	if key == nil {
+		return errors.New("key is nil")
+	}
+	r.keys = append(r.keys, *key)
+
+	return nil
+}
+
+func (r *FakeKeyRepository) Generate(name string) (*core.PrivateKey, error) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, err
+	}
+
+	privateKey := core.PrivateKey{
+		Value: *key,
+		Name: name,
+	}
+
+	return &privateKey, nil
 }
 
 type FakeUserRepository struct {

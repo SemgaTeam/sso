@@ -2,10 +2,10 @@ package test
 
 import (
 	"sso/internal/core"
-	"sso/internal/infrastructure"
-
 	"github.com/stretchr/testify/require"
 
+	"crypto/rand"
+	"crypto/rsa"
 	"context"
 	"testing"
 	"time"
@@ -27,7 +27,19 @@ func TestOAuthWorkflowSuccess(t *testing.T) {
 		clients,
 	}
 	tokenRepo := &FakeTokenRepository{}
-	keyRepo := infrastructure.NewKeyInterface()
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Errorf("private key create error %v", err)	
+	}
+
+	keyRepo := &FakeKeyRepository{
+		keys: []core.PrivateKey{
+			{
+				Value: *privateKey,
+				Name: "test_key",
+			},
+		},
+	}
 
 	accessExpiration := 60*60
 	refreshExpiration := 60*60*24
@@ -42,4 +54,7 @@ func TestOAuthWorkflowSuccess(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, accessToken)
 	require.NotEmpty(t, refreshToken)
+
+	t.Logf("access: %s", accessToken)
+	t.Logf("refresh: %s", refreshToken)
 }

@@ -11,12 +11,48 @@ import (
 	"github.com/pressly/goose/v3"
 
 	"context"
+	"strconv"
 	"database/sql"
 	"log"
+	"os"
 )
 
 func main() {
-	dsn := "postgres://postgres:password@db:5432/postgres"
+	dsn := os.Getenv("POSTGRES_URL")
+	if dsn == "" {
+		log.Fatal("POSTGRES_URL is not set")
+	}
+
+	migrationsPath := os.Getenv("MIGRATIONS_PATH")
+	if migrationsPath == "" {
+		migrationsPath = "migrations"
+	}
+
+	signingKey := os.Getenv("SIGNING_KEY")
+	if signingKey == "" {
+		log.Fatal("SIGNING_KEY is not set")
+	}
+	signingMethod := jwt.SigningMethodHS256
+
+	accessExpirationStr := os.Getenv("ACCESS_TOKEN_EXPIRATION")
+	if accessExpirationStr == "" {
+		log.Fatal("ACCESS_TOKEN_EXPIRATION is not set")
+	}
+	accessTokenExpiration, err := strconv.Atoi(accessExpirationStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	refreshExpirationStr := os.Getenv("REFRESH_TOKEN_EXPIRATION")
+	if refreshExpirationStr == "" {
+		log.Fatal("REFRESH_TOKEN_EXPIRATION is not set")
+	}
+	refreshTokenExpiration, err := strconv.Atoi(refreshExpirationStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	hashCost := 10
 
 	ctx := context.Background()
 
@@ -25,7 +61,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := goose.Up(sqlDb, "migrations"); err != nil {
+	if err := goose.Up(sqlDb, migrationsPath); err != nil {
 		log.Fatal(err)
 	}
 	sqlDb.Close()
@@ -41,17 +77,11 @@ func main() {
 	}
 
 	log.Println("Connected to postgres")
-
-	signingKey := "secret"
-	signingMethod := jwt.SigningMethodHS256
-
-	accessTokenExpiration := 3600
-	refreshTokenExpiration := 60*60*24*7
 	
 	clientInterface := infrastructure.NewClientInterface(pool)
 	tokenInterface := infrastructure.NewTokenInterface(signingKey, signingMethod)
 	userInterface := infrastructure.NewUserInterface(pool)
-	hashInterface := infrastructure.NewHashInterface(10)
+	hashInterface := infrastructure.NewHashInterface(hashCost)
 	keysInterface := infrastructure.NewKeyInterface()
 
 	privateKey, err := keysInterface.Generate("test_key")

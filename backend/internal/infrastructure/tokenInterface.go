@@ -30,7 +30,7 @@ func (i *TokenInterface) Generate(claims *core.Claims) (string, error) {
 func (i *TokenInterface) SignWithKey(claims *core.Claims, key core.PrivateKey) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 
-	signed, err := token.SignedString(key.Value)
+	signed, err := token.SignedString(&key.Value)
 	if err != nil {
 		return "", err
 	}

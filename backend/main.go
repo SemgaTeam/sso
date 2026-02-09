@@ -69,7 +69,7 @@ func main() {
 
 	e := echo.New()
 
-	http.SetupHandlers(e, pool, userUC, loginUC, registerUC, oauthWorkflow, jwksUC)	
+	http.SetupHandlers(e, userUC, loginUC, registerUC, oauthWorkflow, jwksUC)	
 
 	e.Logger.Fatal(e.Start(":8080"))
 }

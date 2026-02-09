@@ -2,9 +2,7 @@ package http
 
 import (
 	"sso/internal/core"
-
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 
@@ -12,7 +10,7 @@ import (
 	"errors"
 )
 
-func SetupHandlers(e *echo.Echo, pool *pgxpool.Pool, userUC *core.UserUseCase, loginUC *core.LoginUseCase, registerUC *core.RegisterUseCase, oauthWorkflow *core.OAuthWorkflow, jwksUC *core.GetPublicKeysUseCase) {
+func SetupHandlers(e *echo.Echo, userUC *core.UserUseCase, loginUC *core.LoginUseCase, registerUC *core.RegisterUseCase, oauthWorkflow *core.OAuthWorkflow, jwksUC *core.GetPublicKeysUseCase) {
 	auth := e.Group("/auth")
 
 	tokenMiddleware := echojwt.WithConfig(echojwt.Config{

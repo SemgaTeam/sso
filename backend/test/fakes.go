@@ -4,8 +4,10 @@ import (
 	"sso/internal/core"
 
 	"context"
-	"fmt"
 	"errors"
+	"fmt"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type FakeClientRepository struct {
@@ -25,6 +27,17 @@ func (r *FakeClientRepository) ByID(ctx context.Context, id string) (*core.Clien
 type FakeTokenRepository struct {}
 func (r *FakeTokenRepository) Generate(claims *core.Claims) (string, error) {
 	return fmt.Sprintf("%v", claims), nil
+}
+
+func (r *FakeTokenRepository) SignWithKey(claims *core.Claims, key core.PrivateKey) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+
+	signed, err := token.SignedString(&key.Value)
+	if err != nil {
+		return "", err
+	}
+
+	return signed, nil
 }
 
 type FakeUserRepository struct {

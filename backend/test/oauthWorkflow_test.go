@@ -1,8 +1,10 @@
 package test
 
 import (
-	"github.com/stretchr/testify/require"
 	"sso/internal/core"
+	"sso/internal/infrastructure"
+
+	"github.com/stretchr/testify/require"
 
 	"context"
 	"testing"
@@ -25,11 +27,12 @@ func TestOAuthWorkflowSuccess(t *testing.T) {
 		clients,
 	}
 	tokenRepo := &FakeTokenRepository{}
+	keyRepo := infrastructure.NewKeyInterface()
 
 	accessExpiration := 60*60
 	refreshExpiration := 60*60*24
 
-	oauthWorkflow := core.NewOAuthWorkflow(clientRepo, tokenRepo, accessExpiration, refreshExpiration)
+	oauthWorkflow := core.NewOAuthWorkflow(clientRepo, tokenRepo, keyRepo, accessExpiration, refreshExpiration)
 
 	ctx := context.Background()
 	userID := "user_id"

@@ -8,15 +8,17 @@ import (
 type OAuthWorkflow struct {
 	client IClient
 	token IToken
+	keys IPrivateKeys
 
 	accessExpiration int
 	refreshExpiration int
 }
 
-func NewOAuthWorkflow(clientInterface IClient, tokenInterface IToken, accessExpiration, refreshExpiration int) *OAuthWorkflow {
+func NewOAuthWorkflow(clientInterface IClient, tokenInterface IToken, keyInterface IPrivateKeys, accessExpiration, refreshExpiration int) *OAuthWorkflow {
 	return &OAuthWorkflow{
 		client: clientInterface,
 		token: tokenInterface,
+		keys: keyInterface,
 		accessExpiration: accessExpiration,
 		refreshExpiration: refreshExpiration,
 	}
@@ -46,12 +48,22 @@ func (w *OAuthWorkflow) Execute(ctx context.Context, userID, clientID, redirectU
 		return "", "", err
 	}
 
-	accessToken, err := w.token.Generate(accessClaims)
+	keys, err := w.keys.GetPrivateKeys()
+	if err != nil {
+		return "", "", err
+	}
+	if len(keys) == 0 {
+		return "", "", errors.New("zero length of private keys array")
+	}
+
+	key := keys[0]
+	
+	accessToken, err := w.token.SignWithKey(accessClaims, key)
 	if err != nil {
 		return "", "", err
 	}
 
-	refreshToken, err := w.token.Generate(refreshClaims)
+	refreshToken, err := w.token.SignWithKey(refreshClaims, key)
 	if err != nil {
 		return "", "", err
 	}

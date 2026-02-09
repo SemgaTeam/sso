@@ -1,11 +1,14 @@
 package test
 
 import (
+	"github.com/golang-jwt/jwt/v5"
 	"sso/internal/core"
 
+	"crypto/rand"
+	"crypto/rsa"
 	"context"
-	"fmt"
 	"errors"
+	"fmt"
 )
 
 type FakeClientRepository struct {
@@ -25,6 +28,48 @@ func (r *FakeClientRepository) ByID(ctx context.Context, id string) (*core.Clien
 type FakeTokenRepository struct {}
 func (r *FakeTokenRepository) Generate(claims *core.Claims) (string, error) {
 	return fmt.Sprintf("%v", claims), nil
+}
+
+func (r *FakeTokenRepository) SignWithKey(claims *core.Claims, key core.PrivateKey) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+
+	signed, err := token.SignedString(&key.Value)
+	if err != nil {
+		return "", err
+	}
+
+	return signed, nil
+}
+
+type FakeKeyRepository struct {
+	keys []core.PrivateKey
+}
+
+func (r *FakeKeyRepository) GetPrivateKeys() ([]core.PrivateKey, error) {
+	return r.keys, nil
+}
+
+func (r *FakeKeyRepository) SavePrivateKey(key *core.PrivateKey) error {
+	if key == nil {
+		return errors.New("key is nil")
+	}
+	r.keys = append(r.keys, *key)
+
+	return nil
+}
+
+func (r *FakeKeyRepository) Generate(name string) (*core.PrivateKey, error) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, err
+	}
+
+	privateKey := core.PrivateKey{
+		Value: *key,
+		Name: name,
+	}
+
+	return &privateKey, nil
 }
 
 type FakeUserRepository struct {

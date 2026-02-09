@@ -2,9 +2,7 @@ package http
 
 import (
 	"sso/internal/core"
-
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 
@@ -12,8 +10,7 @@ import (
 	"errors"
 )
 
-func SetupHandlers(e *echo.Echo, pool *pgxpool.Pool, userUC *core.UserUseCase, loginUC *core.LoginUseCase, registerUC *core.RegisterUseCase, oauthWorkflow *core.OAuthWorkflow) {
-	user := e.Group("/user")
+func SetupHandlers(e *echo.Echo, userUC *core.UserUseCase, loginUC *core.LoginUseCase, registerUC *core.RegisterUseCase, oauthWorkflow *core.OAuthWorkflow, jwksUC *core.GetPublicKeysUseCase) {
 	auth := e.Group("/auth")
 
 	tokenMiddleware := echojwt.WithConfig(echojwt.Config{
@@ -24,77 +21,6 @@ func SetupHandlers(e *echo.Echo, pool *pgxpool.Pool, userUC *core.UserUseCase, l
 	})
 
 	e.HTTPErrorHandler = errorHandler
-
-	user.GET("/", func(c echo.Context) error {
-		ctx := c.Request().Context()
-
-		params := map[string]string{
-			"id": "",
-			"name": "",
-		}
-
-		if err := c.Bind(&params); err != nil {
-			return err
-		}
-
-		user, err := userUC.Get(ctx, params["id"], params["name"])
-		if err != nil {
-			return err
-		}
-
-		return c.JSON(http.StatusOK, user)
-	})
-
-	user.POST("/", func(c echo.Context) error {
-		ctx := c.Request().Context()
-		request := map[string]string {
-			"name": "",
-			"email": "",
-		}
-
-		if err := c.Bind(&request); err != nil {
-			return err
-		}
-
-		user, err := userUC.Create(ctx, request["name"], request["email"])
-		if err != nil {
-			return err
-		}
-
-		return c.JSON(http.StatusOK, user)
-	})
-
-	user.PUT("/:id", func(c echo.Context) error {
-		ctx := c.Request().Context()
-		id := c.Param("id")
-		request := map[string]string{
-			"name": "",
-			"email": "",
-		}
-
-		if err := c.Bind(&request); err != nil {
-			return err
-		}
-
-		err := userUC.Update(ctx, id, request["name"], request["email"])
-		if err != nil {
-			return err
-		}
-
-		return c.NoContent(http.StatusNoContent)
-	})
-
-	user.DELETE("/:id", func(c echo.Context) error {
-		ctx := c.Request().Context()
-		id := c.Param("id")
-
-		err := userUC.Delete(ctx, id)
-		if err != nil {
-			return err
-		}
-
-		return c.NoContent(http.StatusNoContent)
-	})
 
 	auth.POST("/login", func(c echo.Context) error {
 		ctx := c.Request().Context()
@@ -237,6 +163,15 @@ func SetupHandlers(e *echo.Echo, pool *pgxpool.Pool, userUC *core.UserUseCase, l
 		})
 
 	}, tokenMiddleware)
+
+	e.GET("/.well-known/jwks.json", func(c echo.Context) error {
+		keys, err := jwksUC.Execute()
+		if err != nil {
+			return err
+		}
+
+		return c.JSON(http.StatusOK, keys)
+	})
 }
 
 func errorHandler(err error, c echo.Context) {

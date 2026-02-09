@@ -23,9 +23,16 @@ type IClient interface {
 
 type IToken interface {
 	Generate(claims *Claims) (string, error)
+	SignWithKey(claims *Claims, key PrivateKey) (string, error)
 }
 
 type IHash interface {
 	HashPassword(raw string) (string, error)
 	CheckPassword(raw, hash string) error
+}
+
+type IPrivateKeys interface {
+	GetPrivateKeys() ([]PrivateKey, error)
+	SavePrivateKey(*PrivateKey) error
+	Generate(name string) (*PrivateKey, error)
 }

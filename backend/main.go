@@ -4,7 +4,6 @@ import (
 	"sso/internal/core"
 	"sso/internal/infrastructure"
 	"sso/internal/infrastructure/http"
-
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -53,16 +52,24 @@ func main() {
 	tokenInterface := infrastructure.NewTokenInterface(signingKey, signingMethod)
 	userInterface := infrastructure.NewUserInterface(pool)
 	hashInterface := infrastructure.NewHashInterface(10)
+	keysInterface := infrastructure.NewKeyInterface()
 
-	oauthWorkflow := core.NewOAuthWorkflow(clientInterface, tokenInterface, accessTokenExpiration, refreshTokenExpiration)
+	privateKey, err := keysInterface.Generate("test_key")
+	if err != nil {
+		panic("error generating private key " + err.Error())
+	}
+	keysInterface.SavePrivateKey(privateKey)
+
+	oauthWorkflow := core.NewOAuthWorkflow(clientInterface, tokenInterface, keysInterface, accessTokenExpiration, refreshTokenExpiration)
 
 	loginUC := core.NewLoginUseCase(userInterface, tokenInterface, hashInterface)
 	registerUC := core.NewRegisterUseCase(userInterface, tokenInterface, hashInterface)
 	userUC := core.NewUserUseCase(userInterface)
+	jwksUC := core.NewJWKSUseCase(keysInterface)
 
 	e := echo.New()
 
-	http.SetupHandlers(e, pool, userUC, loginUC, registerUC, oauthWorkflow)	
+	http.SetupHandlers(e, userUC, loginUC, registerUC, oauthWorkflow, jwksUC)	
 
 	e.Logger.Fatal(e.Start(":8080"))
 }

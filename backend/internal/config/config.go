@@ -15,6 +15,7 @@ type Config struct {
 	SigningMethod jwt.SigningMethod
 	AccessTokenExp int
 	RefreshTokenExp int
+	SessionExp int
 	HashCost int
 }
 
@@ -54,6 +55,15 @@ func GetConfig() (*Config, error) {
 		return nil, err
 	}
 
+	sessionExpStr := os.Getenv("SESSION_EXPIRATION")
+	if sessionExpStr == "" {
+		return nil, errors.New("SESSION_EXPIRATION is not set")
+	}
+	sessionExp, err := strconv.Atoi(sessionExpStr)
+	if err != nil {
+		return nil, err
+	}
+
 	hashCost := 10
 
 	conf := Config{
@@ -63,6 +73,7 @@ func GetConfig() (*Config, error) {
 		SigningMethod: signingMethod,
 		AccessTokenExp: accessTokenExpiration, 
 		RefreshTokenExp: refreshTokenExpiration,
+		SessionExp: sessionExp,
 		HashCost: hashCost,
 	}
 

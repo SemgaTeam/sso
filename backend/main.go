@@ -59,8 +59,8 @@ func main() {
 
 	oauthWorkflow := core.NewOAuthWorkflow(clientInterface, tokenInterface, keysInterface, conf.AccessTokenExp, conf.RefreshTokenExp)
 
-	loginUC := core.NewLoginUseCase(userInterface, tokenInterface, hashInterface)
-	registerUC := core.NewRegisterUseCase(userInterface, tokenInterface, hashInterface)
+	loginUC := core.NewLoginUseCase(userInterface, tokenInterface, hashInterface, conf.SessionExp)
+	registerUC := core.NewRegisterUseCase(userInterface, tokenInterface, hashInterface, conf.SessionExp)
 	userUC := core.NewUserUseCase(userInterface)
 	jwksUC := core.NewJWKSUseCase(keysInterface)
 

@@ -47,7 +47,9 @@ func TestLoginByEmailSuccess(t *testing.T) {
 	tokenRepo := infrastructure.NewTokenInterface("secret", jwt.SigningMethodHS256)
 	hashRepo := &FakeHashRepository{}
 
-	loginUC := core.NewLoginUseCase(userRepo, tokenRepo, hashRepo)
+	sessionExp := 3600
+
+	loginUC := core.NewLoginUseCase(userRepo, tokenRepo, hashRepo, sessionExp)
 
 	ctx := context.Background()
 

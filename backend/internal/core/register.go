@@ -11,13 +11,15 @@ type RegisterUseCase struct {
 	user IUser
 	token IToken
 	hash IHash
+	sessionExp int
 }
 
-func NewRegisterUseCase(userInterface IUser, tokenInterface IToken, hashInterface IHash) *RegisterUseCase {
+func NewRegisterUseCase(user IUser, token IToken, hash IHash, sessionExp int) *RegisterUseCase {
 	return &RegisterUseCase{
-		user: userInterface,
-		token: tokenInterface,
-		hash: hashInterface,
+		user,
+		token,
+		hash,
+		sessionExp,
 	}
 }
 
@@ -51,10 +53,8 @@ func (uc *RegisterUseCase) Execute(ctx context.Context, input RegisterInput) (st
 		return "", err
 	}
 
-	sessionTokenExp := 3600
-
 	issuedAt := jwt.NewNumericDate(time.Now())
-	expiresAt := jwt.NewNumericDate(time.Now().Add(time.Duration(sessionTokenExp)*time.Second))
+	expiresAt := jwt.NewNumericDate(time.Now().Add(time.Duration(uc.sessionExp)*time.Second))
 
 	claims := Claims{
 		RegisteredClaims: jwt.RegisteredClaims{

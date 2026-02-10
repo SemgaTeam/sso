@@ -12,13 +12,15 @@ type LoginUseCase struct {
 	user IUser
 	token IToken
 	hash IHash
+	sessionExp int
 }
 
-func NewLoginUseCase(user IUser, token IToken, hash IHash) *LoginUseCase {
+func NewLoginUseCase(user IUser, token IToken, hash IHash, sessionExp int) *LoginUseCase {
 	return &LoginUseCase{
 		user,
 		token,
 		hash,
+		sessionExp,
 	}
 }
 
@@ -54,10 +56,8 @@ func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInput) (string, 
 		return "", errors.New("user cannot be logged in")
 	}
 
-	sessionTokenExp := 3600
-
 	issuedAt := jwt.NewNumericDate(time.Now())
-	expiresAt := jwt.NewNumericDate(time.Now().Add(time.Duration(sessionTokenExp)*time.Second))
+	expiresAt := jwt.NewNumericDate(time.Now().Add(time.Duration(uc.sessionExp)*time.Second))
 
 	claims := Claims{
 		RegisteredClaims: jwt.RegisteredClaims{

@@ -18,7 +18,9 @@ func TestRegisterByEmailSuccess(t *testing.T) {
 	tokenRepo := infrastructure.NewTokenInterface("secret", jwt.SigningMethodHS256)
 	hashRepo := &FakeHashRepository{}
 
-	registerUC := core.NewRegisterUseCase(userRepo, tokenRepo, hashRepo)
+	sessionExp := 3600
+
+	registerUC := core.NewRegisterUseCase(userRepo, tokenRepo, hashRepo, sessionExp)
 
 	ctx := context.Background()
 	input := core.RegisterInput{

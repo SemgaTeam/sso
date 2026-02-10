@@ -15,7 +15,7 @@ services:
       ACCESS_TOKEN_EXPIRATION: ${ACCESS_TOKEN_EXPIRATION}
       REFRESH_TOKEN_EXPIRATION: ${REFRESH_TOKEN_EXPIRATION}
     volumes:
-      - ./backend/migrations:/app/migrations
+      - ./backend/${MIGRATIONS_PATH}:/app/migrations
   db:
     image: postgres:18.0-alpine3.22
     restart: unless-stopped

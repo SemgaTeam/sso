@@ -2,9 +2,9 @@ package main
 
 import (
 	"sso/internal/core"
+	"sso/internal/config"
 	"sso/internal/infrastructure"
 	"sso/internal/infrastructure/http"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/labstack/echo/v4"
@@ -16,21 +16,24 @@ import (
 )
 
 func main() {
-	dsn := "postgres://postgres:password@db:5432/postgres"
-
-	ctx := context.Background()
-
-	sqlDb, err := sql.Open("pgx", dsn)
+	conf, err := config.GetConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := goose.Up(sqlDb, "migrations"); err != nil {
+	ctx := context.Background()
+
+	sqlDb, err := sql.Open("pgx", conf.PostgresURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := goose.Up(sqlDb, conf.MigrationsPath); err != nil {
 		log.Fatal(err)
 	}
 	sqlDb.Close()
 
-	pool, err := pgxpool.New(ctx, dsn)
+	pool, err := pgxpool.New(ctx, conf.PostgresURL)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -41,17 +44,11 @@ func main() {
 	}
 
 	log.Println("Connected to postgres")
-
-	signingKey := "secret"
-	signingMethod := jwt.SigningMethodHS256
-
-	accessTokenExpiration := 3600
-	refreshTokenExpiration := 60*60*24*7
 	
 	clientInterface := infrastructure.NewClientInterface(pool)
-	tokenInterface := infrastructure.NewTokenInterface(signingKey, signingMethod)
+	tokenInterface := infrastructure.NewTokenInterface(conf.SigningKey, conf.SigningMethod)
 	userInterface := infrastructure.NewUserInterface(pool)
-	hashInterface := infrastructure.NewHashInterface(10)
+	hashInterface := infrastructure.NewHashInterface(conf.HashCost)
 	keysInterface := infrastructure.NewKeyInterface()
 
 	privateKey, err := keysInterface.Generate("test_key")
@@ -60,7 +57,7 @@ func main() {
 	}
 	keysInterface.SavePrivateKey(privateKey)
 
-	oauthWorkflow := core.NewOAuthWorkflow(clientInterface, tokenInterface, keysInterface, accessTokenExpiration, refreshTokenExpiration)
+	oauthWorkflow := core.NewOAuthWorkflow(clientInterface, tokenInterface, keysInterface, conf.AccessTokenExp, conf.RefreshTokenExp)
 
 	loginUC := core.NewLoginUseCase(userInterface, tokenInterface, hashInterface)
 	registerUC := core.NewRegisterUseCase(userInterface, tokenInterface, hashInterface)

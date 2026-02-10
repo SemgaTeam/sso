@@ -8,8 +8,14 @@ services:
       db:
         condition:
           service_healthy
+    environment:
+      POSTGRES_URL: ${POSTGRES_URL} 
+      MIGRATIONS_PATH: ${MIGRATIONS_PATH}
+      SIGNING_KEY: ${SIGNING_KEY}
+      ACCESS_TOKEN_EXPIRATION: ${ACCESS_TOKEN_EXPIRATION}
+      REFRESH_TOKEN_EXPIRATION: ${REFRESH_TOKEN_EXPIRATION}
     volumes:
-      - ./backend/migrations:/app/migrations
+      - ./backend/${MIGRATIONS_PATH}:/app/migrations
   db:
     image: postgres:18.0-alpine3.22
     restart: unless-stopped

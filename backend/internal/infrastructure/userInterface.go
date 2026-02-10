@@ -2,9 +2,13 @@ package infrastructure
 
 import (
 	"sso/internal/core"
+	e "sso/internal/core/errors"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"context"
+	"errors"
 )
 
 type UserInterface struct {
@@ -27,7 +31,11 @@ func (i *UserInterface) ByID(ctx context.Context, id string) (*core.User, error)
 		id,
 	).Scan(&name, &email, &status)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		} else {
+			return nil, e.Unknown(err)
+		}
 	}
 
 	user := core.User{
@@ -59,7 +67,11 @@ func (i *UserInterface) ByIdentity(ctx context.Context, itype, externalID, issue
 	).Scan(&id, &name, &email, &status)
 
 	if err != nil {
-		return nil, err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		} else {
+			return nil, e.Unknown(err)
+		}
 	}
 
 	user := core.User{
@@ -87,7 +99,11 @@ func (i *UserInterface) ByEmail(ctx context.Context, email string) (*core.User, 
 	).Scan(&id, &name, &status)
 
 	if err != nil {
-		return nil, err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		} else {
+			return nil, e.Unknown(err)
+		}
 	}
 
 	user := core.User{
@@ -115,7 +131,11 @@ func (i *UserInterface) ByName(ctx context.Context, name string) (*core.User, er
 	).Scan(&id, &email, &status)
 
 	if err != nil {
-		return nil, err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		} else {
+			return nil, e.Unknown(err)
+		}
 	}
 
 	user := core.User{
@@ -141,7 +161,12 @@ func (i *UserInterface) Create(ctx context.Context, user *core.User) error {
 	).Scan(&id)
 
 	if err != nil {
-		return err
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // unique violation
+			return e.UniqueViolated
+		} else {
+			return e.Unknown(err)
+		}
 	}
 
 	user.ID = id
@@ -158,7 +183,16 @@ func (i *UserInterface) Update(ctx context.Context, user *core.User) error {
 		user.ID,
 	)
 
-	return err
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // unique violation
+			return e.UniqueViolated
+		} else {
+			return e.Unknown(err)
+		}
+	}
+
+	return nil
 }
 
 func (i *UserInterface) SaveIdentity(ctx context.Context, identity *core.Identity) error {
@@ -168,7 +202,16 @@ func (i *UserInterface) SaveIdentity(ctx context.Context, identity *core.Identit
 			identity.UserID, identity.Type, identity.ExternalID, identity.Issuer, identity.ID,
 		)
 
-		return err
+		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23503" { // foreign key violation
+				return e.UserNotFound
+			} else {
+				return e.Unknown(err)
+			}
+		}
+
+		return nil
 	} 
 
 	var id string
@@ -178,7 +221,12 @@ func (i *UserInterface) SaveIdentity(ctx context.Context, identity *core.Identit
 	).Scan(&id)
 
 	if err != nil {
-		return err
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" { // foreign key violation
+			return e.UserNotFound
+		} else {
+			return e.Unknown(err)
+		}
 	}
 
 	identity.ID = id
@@ -203,7 +251,12 @@ func (i *UserInterface) SaveCredential(ctx context.Context, credential *core.Cre
 	).Scan(&id)
 
 	if err != nil {
-		return err
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" { // foreign key violation
+			return e.IdentityNotFound
+		} else {
+			return e.Unknown(err)
+		}
 	}
 
 	credential.ID = id
@@ -217,31 +270,44 @@ func (i *UserInterface) preload(ctx context.Context, user *core.User) error {
 		user.ID,
 	)
 	if err != nil {
-		return err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		} else {
+			return e.Unknown(err)
+		}
 	}
 	defer identityRows.Close()
 
 	for identityRows.Next() {
 		var identity core.Identity
+
 		err := identityRows.Scan(&identity.ID, &identity.Type, &identity.ExternalID, &identity.Issuer, &identity.CreatedAt)
+
 		if err != nil {
-			return err
+			return e.Unknown(err)
 		}
 
 		credentialRows, err := i.pool.Query(ctx, 
 			"SELECT id, type, hash, status, created_at FROM credentials WHERE identity_id = $1",
 			identity.ID,
 		)
+
 		if err != nil {
-			return err
+			if errors.Is(err, pgx.ErrNoRows) {
+				continue
+			} else {
+				return e.Unknown(err)
+			}
 		}
 		defer credentialRows.Close()
 
 		for credentialRows.Next() {
 			var cred core.Credential
+
 			err := credentialRows.Scan(&cred.ID, &cred.Type, &cred.Hash, &cred.Status, &cred.CreatedAt)
+
 			if err != nil {
-				return err
+				return e.Unknown(err)
 			}
 
 			identity.Credentials = append(identity.Credentials, cred)

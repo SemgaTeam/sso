@@ -17,6 +17,9 @@ func Unknown(err error) Error {
 var (
 	UserNotFound = NewError("user not found")
 	ClientNotFound = NewError("client not found")
+	IdentityNotFound = NewError("identity not found")
+
+	UniqueViolated = NewError("unique constraint violated")
 
 	KeyIsNil = NewError("private key is nil")
 )

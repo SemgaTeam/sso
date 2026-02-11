@@ -46,6 +46,8 @@ func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInput) (string, 
 		token := input.Token
 		email := token["email"]
 		user, err = GoogleOAuth(ctx, uc.user, email, token["raw"], input.Provider, input.ExternalID, input.Issuer)
+	default:
+		err = e.InvalidAuthProvider
 	}
 
 	if err != nil {

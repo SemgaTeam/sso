@@ -31,4 +31,6 @@ var (
 	KeysNotFound = NewError("keys not found")
 
 	UniqueViolated = NewError("unique constraint violated")
+
+	InvalidAuthProvider = NewError("invalid authentication provider")
 )

@@ -1,7 +1,8 @@
 package core
 
 import (
-	"errors"
+	e "sso/internal/core/errors"
+
 	"context"
 )
 
@@ -31,11 +32,11 @@ func (w *OAuthWorkflow) Execute(ctx context.Context, userID, clientID, redirectU
 	}
 
 	if client == nil {
-		return "", "", errors.New("client not found")
+		return "", "", e.ClientNotFound
 	}
 
 	if !client.AllowsRedirect(redirectURI) {
-		return "", "", errors.New("redirect uri is not allowed")
+		return "", "", e.RedirectURINotAllowed
 	}
 
 	accessClaims, err := NewClaims(client.ID, userID, w.accessExpiration)
@@ -53,7 +54,7 @@ func (w *OAuthWorkflow) Execute(ctx context.Context, userID, clientID, redirectU
 		return "", "", err
 	}
 	if len(keys) == 0 {
-		return "", "", errors.New("zero length of private keys array")
+		return "", "", e.KeysNotFound
 	}
 
 	key := keys[0]

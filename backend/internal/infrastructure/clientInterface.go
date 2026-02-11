@@ -1,10 +1,14 @@
 package infrastructure
 
 import (
-	"github.com/jackc/pgx/v5/pgxpool"
 	"sso/internal/core"
+	e "sso/internal/core/errors"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"context"
+	"errors"
 	"time"
 )
 
@@ -29,7 +33,11 @@ func (i *ClientInterface) ByID(ctx context.Context, clientID string) (*core.Clie
 	).Scan(&id, &name, &status, &redirectURIs, &createdAt)
 
 	if err != nil {
-		return nil, err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		} else {
+			return nil, e.Unknown(err)
+		}
 	}
 
 	client := core.Client{
@@ -40,5 +48,5 @@ func (i *ClientInterface) ByID(ctx context.Context, clientID string) (*core.Clie
 		CreatedAt: createdAt,
 	}
 
-	return &client, err
+	return &client, nil
 }

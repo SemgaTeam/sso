@@ -1,19 +1,22 @@
 package http
 
 import (
-	e "sso/internal/core/errors"
 	"sso/internal/core"
+	e "sso/internal/core/errors"
+
 	"github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+	"go.uber.org/zap"
 
-	"net/http"
+	"context"
 	"errors"
+	"net/http"
+	"fmt"
 )
 
-func SetupHandlers(e *echo.Echo, userUC *core.UserUseCase, loginUC *core.LoginUseCase, registerUC *core.RegisterUseCase, oauthWorkflow *core.OAuthWorkflow, jwksUC *core.GetPublicKeysUseCase) {
-	auth := e.Group("/auth")
-
+func SetupHandlers(e *echo.Echo, baseLogger *zap.Logger, userUC *core.UserUseCase, loginUC *core.LoginUseCase, registerUC *core.RegisterUseCase, oauthWorkflow *core.OAuthWorkflow, jwksUC *core.GetPublicKeysUseCase) {
 	tokenMiddleware := echojwt.WithConfig(echojwt.Config{
 		SigningKey: []byte("secret"),
 		TokenLookup: "cookie:sso_session_token",
@@ -21,7 +24,44 @@ func SetupHandlers(e *echo.Echo, userUC *core.UserUseCase, loginUC *core.LoginUs
 		SigningMethod: jwt.SigningMethodHS256.Alg(),
 	})
 
+	loggerMiddleware := func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func (c echo.Context) error {
+			reqID := c.Response().Header().Get(echo.HeaderXRequestID)
+
+			logger := baseLogger.With(zap.String("request_id", reqID))
+
+			ctx := context.WithValue(c.Request().Context(), "requestId", reqID)
+			ctx = context.WithValue(ctx, "logger", logger)
+
+			c.SetRequest(c.Request().WithContext(ctx))
+
+			return next(c)
+		}
+	}
+
 	e.HTTPErrorHandler = errorHandler
+
+	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		LogStatus: true,
+		LogURIPath: true,
+		LogMethod: true,
+		LogError: true,
+		LogRequestID: true,
+		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+			fields := []zap.Field{zap.String("request_id", v.RequestID)}
+
+			if v.Error != nil {
+				fields = append(fields, zap.Error(v.Error))
+			}
+
+			baseLogger.Info(fmt.Sprintf("%v %v %v", v.Method, v.URIPath, v.Status), fields...)
+			return nil
+		},
+	}))
+	e.Use(middleware.RequestID())
+	e.Use(loggerMiddleware)
+
+	auth := e.Group("/auth")
 
 	auth.POST("/login", func(c echo.Context) error {
 		ctx := c.Request().Context()

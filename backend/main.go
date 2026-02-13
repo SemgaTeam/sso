@@ -81,7 +81,7 @@ func main() {
 
 	e := echo.New()
 
-	http.SetupHandlers(e, userUC, loginUC, registerUC, oauthWorkflow, jwksUC)	
+	http.SetupHandlers(e, log.Log, userUC, loginUC, registerUC, oauthWorkflow, jwksUC)	
 
 	log.Log.Info("HTTP handlers setup")
 

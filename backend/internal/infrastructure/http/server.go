@@ -24,42 +24,7 @@ func SetupHandlers(e *echo.Echo, baseLogger *zap.Logger, userUC *core.UserUseCas
 		SigningMethod: jwt.SigningMethodHS256.Alg(),
 	})
 
-	loggerMiddleware := func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func (c echo.Context) error {
-			reqID := c.Response().Header().Get(echo.HeaderXRequestID)
-
-			logger := baseLogger.With(zap.String("request_id", reqID))
-
-			ctx := context.WithValue(c.Request().Context(), "requestId", reqID)
-			ctx = context.WithValue(ctx, "logger", logger)
-
-			c.SetRequest(c.Request().WithContext(ctx))
-
-			return next(c)
-		}
-	}
-
-	e.HTTPErrorHandler = errorHandler
-
-	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
-		LogStatus: true,
-		LogURIPath: true,
-		LogMethod: true,
-		LogError: true,
-		LogRequestID: true,
-		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-			fields := []zap.Field{zap.String("request_id", v.RequestID)}
-
-			if v.Error != nil {
-				fields = append(fields, zap.Error(v.Error))
-			}
-
-			baseLogger.Info(fmt.Sprintf("%v %v %v", v.Method, v.URIPath, v.Status), fields...)
-			return nil
-		},
-	}))
-	e.Use(middleware.RequestID())
-	e.Use(loggerMiddleware)
+	initMiddleware(e, baseLogger)
 
 	auth := e.Group("/auth")
 
@@ -258,4 +223,43 @@ func errorHandler(err error, c echo.Context) {
 			"error": httpErr.Message,
 		})
 	}
+}
+
+func initMiddleware(e *echo.Echo, baseLogger *zap.Logger) {
+	loggerMiddleware := func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func (c echo.Context) error {
+			reqID := c.Response().Header().Get(echo.HeaderXRequestID)
+
+			logger := baseLogger.With(zap.String("request_id", reqID))
+
+			ctx := context.WithValue(c.Request().Context(), "requestId", reqID)
+			ctx = context.WithValue(ctx, "logger", logger)
+
+			c.SetRequest(c.Request().WithContext(ctx))
+
+			return next(c)
+		}
+	}
+
+	e.HTTPErrorHandler = errorHandler
+
+	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		LogStatus: true,
+		LogURIPath: true,
+		LogMethod: true,
+		LogError: true,
+		LogRequestID: true,
+		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+			fields := []zap.Field{zap.String("request_id", v.RequestID)}
+
+			if v.Error != nil {
+				fields = append(fields, zap.Error(v.Error))
+			}
+
+			baseLogger.Info(fmt.Sprintf("%v %v %v", v.Method, v.URIPath, v.Status), fields...)
+			return nil
+		},
+	}))
+	e.Use(middleware.RequestID())
+	e.Use(loggerMiddleware)
 }

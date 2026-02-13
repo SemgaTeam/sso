@@ -1,11 +1,11 @@
 package core
 
 import (
+	e "sso/internal/core/errors"
 	"github.com/golang-jwt/jwt/v5"
 
 	"context"
 	"time"
-	"errors"
 )
 
 type LoginUseCase struct {
@@ -46,6 +46,8 @@ func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInput) (string, 
 		token := input.Token
 		email := token["email"]
 		user, err = GoogleOAuth(ctx, uc.user, email, token["raw"], input.Provider, input.ExternalID, input.Issuer)
+	default:
+		err = e.InvalidAuthProvider
 	}
 
 	if err != nil {
@@ -53,7 +55,7 @@ func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInput) (string, 
 	}
 
 	if !user.CanLogin() {
-		return "", errors.New("user cannot be logged in")
+		return "", e.UserCannotBeLoggedIn
 	}
 
 	issuedAt := jwt.NewNumericDate(time.Now())
@@ -88,7 +90,7 @@ func (uc *LoginUseCase) loginByEmail(ctx context.Context, input LoginInput) (*Us
 	}
 
 	if emailIdentity == nil {
-		return nil, errors.New("no email identity")
+		return nil, e.IdentityNotFound
 	}
 
 	var passwordCred *Credential
@@ -99,7 +101,7 @@ func (uc *LoginUseCase) loginByEmail(ctx context.Context, input LoginInput) (*Us
 	}
 
 	if passwordCred == nil {
-		return nil, errors.New("no password credential")
+		return nil, e.CredentialNotFound
 	}
 
 	if err := uc.hash.CheckPassword(input.Password, passwordCred.Hash); err != nil {

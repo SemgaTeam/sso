@@ -1,6 +1,7 @@
 package http
 
 import (
+	e "sso/internal/core/errors"
 	"sso/internal/core"
 	"github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
@@ -175,9 +176,46 @@ func SetupHandlers(e *echo.Echo, userUC *core.UserUseCase, loginUC *core.LoginUs
 }
 
 func errorHandler(err error, c echo.Context) {
+	var httpErr HTTPError
+	var echoErr *echo.HTTPError
+
+	switch {
+	case errors.As(err, &echoErr):
+		httpErr.Code = echoErr.Code
+		httpErr.Message = echoErr.Message.(string)
+
+	case errors.Is(err, e.UserNotFound):
+		httpErr = NotFound("user not found")
+
+	case errors.Is(err, e.UserCannotBeLoggedIn):
+		httpErr = BadRequest("user cannot be logged in")
+
+	case errors.Is(err, e.UserCannotBeUpdated):
+		httpErr = BadRequest("user cannot be updated")
+
+	case errors.Is(err, e.RedirectURINotAllowed):
+		httpErr = BadRequest("redirect uri is not allowed")
+
+	case errors.Is(err, e.IdentityNotFound):
+	case errors.Is(err, e.CredentialNotFound):
+		httpErr = Unauthorized("authentication failure")
+
+	case errors.Is(err, e.InvalidNameOrEmail):
+		httpErr = BadRequest("invalid name or email")
+
+	case errors.Is(err, e.ClientNotFound):
+		httpErr = NotFound("client not found")
+
+	case errors.Is(err, e.InvalidAuthProvider):
+		httpErr = BadRequest("invalid authentication provider")
+
+	default:
+		httpErr = Internal("internal server error")	
+	}
+
 	if !c.Response().Committed {
-		c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": err.Error(),
+		c.JSON(httpErr.Code, map[string]string{
+			"error": httpErr.Message,
 		})
 	}
 }

@@ -1,7 +1,8 @@
 package core
 
 import (
-	"errors"
+	e "sso/internal/core/errors"
+
 	"context"
 )
 
@@ -15,7 +16,7 @@ type User struct {
 
 func NewUser(name, email string) (*User, error) {
 	if name == "" || email == "" {
-		return nil, errors.New("name and email must be not empty")
+		return nil, e.InvalidNameOrEmail
 	}
 
 	return &User{
@@ -35,11 +36,11 @@ func (u *User) CanLogin() bool {
 
 func (u *User) Update(name, email string) error {
 	if u.Status == "deleted" {
-		return errors.New("user is deleted")	
+		return e.UserCannotBeUpdated
 	}
 
 	if name == "" || email == "" {
-		return errors.New("name and email must be not empty")
+		return e.InvalidNameOrEmail
 	}
 
 	u.Name = name
@@ -50,7 +51,7 @@ func (u *User) Update(name, email string) error {
 
 func (u *User) Delete() error {
 	if u.Status == "deleted" {
-		return errors.New("user is already deleted")
+		return nil
 	}
 
 	u.Status = "deleted"

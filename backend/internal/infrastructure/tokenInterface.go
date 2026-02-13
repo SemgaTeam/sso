@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	"sso/internal/core"
+	e "sso/internal/core/errors"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -21,7 +22,7 @@ func (i *TokenInterface) Generate(claims *core.Claims) (string, error) {
 	token := jwt.NewWithClaims(i.signingMethod, claims)
 	signedStr, err := token.SignedString([]byte(i.signingKey)) 
 	if err != nil {
-		return "", err
+		return "", e.Unknown(err)
 	}
 
 	return signedStr, nil
@@ -32,7 +33,7 @@ func (i *TokenInterface) SignWithKey(claims *core.Claims, key core.PrivateKey) (
 
 	signed, err := token.SignedString(&key.Value)
 	if err != nil {
-		return "", err
+		return "", e.Unknown(err)
 	}
 
 	return signed, nil

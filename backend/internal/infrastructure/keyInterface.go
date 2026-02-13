@@ -1,10 +1,11 @@
 package infrastructure
 
 import (
+	"sso/internal/core"
+	e "sso/internal/core/errors"
+
 	"crypto/rand"
 	"crypto/rsa"
-	"errors"
-	"sso/internal/core"
 )
 
 type KeyInterface struct {
@@ -23,7 +24,7 @@ func (i *KeyInterface) GetPrivateKeys() ([]core.PrivateKey, error) {
 
 func (i *KeyInterface) SavePrivateKey(key *core.PrivateKey) error {
 	if key == nil {
-		return errors.New("key is nil")
+		return e.KeyIsNil
 	}
 
 	i.keys = append(i.keys, *key)
@@ -34,7 +35,7 @@ func (i *KeyInterface) SavePrivateKey(key *core.PrivateKey) error {
 func (i *KeyInterface) Generate(name string) (*core.PrivateKey, error) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return nil, err
+		return nil, e.Unknown(err)
 	}
 
 	privateKey := core.PrivateKey{

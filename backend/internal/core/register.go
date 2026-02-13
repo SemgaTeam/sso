@@ -1,6 +1,7 @@
 package core
 
 import (
+	e "sso/internal/core/errors"
 	"github.com/golang-jwt/jwt/v5"
 
 	"context"
@@ -47,6 +48,9 @@ func (uc *RegisterUseCase) Execute(ctx context.Context, input RegisterInput) (st
 		token := input.Token
 		email := token["email"]
 		user, err = GoogleOAuth(ctx, uc.user, email, token["raw"], input.Provider, input.ExternalID, input.Issuer)
+
+	default:
+		err = e.InvalidAuthProvider
 	}
 
 	if err != nil {

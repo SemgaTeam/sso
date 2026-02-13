@@ -2,8 +2,8 @@ package http
 
 import (
 	"sso/internal/core"
+	"sso/internal/config"
 	e "sso/internal/core/errors"
-
 	"github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
@@ -16,12 +16,12 @@ import (
 	"fmt"
 )
 
-func SetupHandlers(e *echo.Echo, baseLogger *zap.Logger, userUC *core.UserUseCase, loginUC *core.LoginUseCase, registerUC *core.RegisterUseCase, oauthWorkflow *core.OAuthWorkflow, jwksUC *core.GetPublicKeysUseCase) {
+func SetupHandlers(conf *config.Config, e *echo.Echo, baseLogger *zap.Logger, userUC *core.UserUseCase, loginUC *core.LoginUseCase, registerUC *core.RegisterUseCase, oauthWorkflow *core.OAuthWorkflow, jwksUC *core.GetPublicKeysUseCase) {
 	tokenMiddleware := echojwt.WithConfig(echojwt.Config{
-		SigningKey: []byte("secret"),
+		SigningKey: []byte(conf.SigningKey),
 		TokenLookup: "cookie:sso_session_token",
 		ContextKey: "sso_session_token",
-		SigningMethod: jwt.SigningMethodHS256.Alg(),
+		SigningMethod: conf.SigningMethod.Alg(),
 	})
 
 	initMiddleware(e, baseLogger)

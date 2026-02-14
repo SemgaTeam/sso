@@ -1,49 +1,59 @@
 package main
 
 import (
-	"sso/internal/core"
 	"sso/internal/config"
+	"sso/internal/core"
 	"sso/internal/infrastructure"
 	"sso/internal/infrastructure/http"
+	"sso/internal/log"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/labstack/echo/v4"
 	"github.com/pressly/goose/v3"
+	"go.uber.org/zap"
 
 	"context"
 	"database/sql"
-	"log"
+	"os"
 )
 
 func main() {
+	log.InitLogger("logs/main.log")
+
 	conf, err := config.GetConfig()
 	if err != nil {
-		log.Fatal(err)
+		log.Log.Fatal("failed to init config", zap.Error(err))
+		os.Exit(1)
 	}
 
 	ctx := context.Background()
 
 	sqlDb, err := sql.Open("pgx", conf.PostgresURL)
 	if err != nil {
-		log.Fatal(err)
+		log.Log.Fatal("failed to run migrations", zap.Error(err))
+		os.Exit(1)
 	}
 
 	if err := goose.Up(sqlDb, conf.MigrationsPath); err != nil {
-		log.Fatal(err)
+		log.Log.Fatal("failed to run migrations", zap.Error(err), zap.String("migrations_path", conf.MigrationsPath))
+		os.Exit(1)
 	}
 	sqlDb.Close()
 
 	pool, err := pgxpool.New(ctx, conf.PostgresURL)
 	if err != nil {
-		log.Fatal(err)
+		log.Log.Fatal("failed to open postgresql", zap.Error(err), zap.String("url", conf.PostgresURL))
+		os.Exit(1)
 	}
 	defer pool.Close()
 
 	if err := pool.Ping(ctx); err != nil {
-		log.Fatal(err)
+		log.Log.Fatal("ping db error", zap.Error(err))
+		os.Exit(1)
 	}
 
-	log.Println("Connected to postgres")
+	log.Log.Info("Connected to postgres")
 	
 	clientInterface := infrastructure.NewClientInterface(pool)
 	tokenInterface := infrastructure.NewTokenInterface(conf.SigningKey, conf.SigningMethod)
@@ -51,9 +61,12 @@ func main() {
 	hashInterface := infrastructure.NewHashInterface(conf.HashCost)
 	keysInterface := infrastructure.NewKeyInterface()
 
+	log.Log.Info("Initialized interfaces")
+
 	privateKey, err := keysInterface.Generate("test_key")
 	if err != nil {
-		panic("error generating private key " + err.Error())
+		log.Log.Fatal("error generating private key", zap.Error(err))
+		os.Exit(1)
 	}
 	keysInterface.SavePrivateKey(privateKey)
 
@@ -64,9 +77,13 @@ func main() {
 	userUC := core.NewUserUseCase(userInterface)
 	jwksUC := core.NewJWKSUseCase(keysInterface)
 
+	log.Log.Info("Initialized use cases")
+
 	e := echo.New()
 
-	http.SetupHandlers(e, userUC, loginUC, registerUC, oauthWorkflow, jwksUC)	
+	http.SetupHandlers(conf, e, log.Log, userUC, loginUC, registerUC, oauthWorkflow, jwksUC)	
 
-	e.Logger.Fatal(e.Start(":8080"))
+	log.Log.Info("HTTP handlers setup")
+
+	log.Log.Fatal("Server error", zap.Error(e.Start(":8080")))
 }

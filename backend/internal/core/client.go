@@ -16,5 +16,5 @@ type Client struct {
 }
 
 func (c *Client) AllowsRedirect(uri string) bool {
-	return slices.Contains(c.RedirectURIs, uri)
+	return c.Status == "active" && slices.Contains(c.RedirectURIs, uri)
 }

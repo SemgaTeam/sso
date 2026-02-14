@@ -1,9 +1,12 @@
 package core
 
 import (
+	"go.uber.org/zap"
+
 	"crypto/rsa"
 	"encoding/base64"
 	"math/big"
+	"context"
 )
 
 type GetPublicKeysUseCase struct {
@@ -16,9 +19,12 @@ func NewJWKSUseCase(keys IPrivateKeys) *GetPublicKeysUseCase {
 	}
 }
 
-func (uc *GetPublicKeysUseCase) Execute() (JWKS, error) {
+func (uc *GetPublicKeysUseCase) Execute(ctx context.Context) (JWKS, error) {
+	log := getLoggerFromContext(ctx)
+
 	privateKeys, err := uc.keys.GetPrivateKeys()
 	if err != nil {
+		log.Fatal("failed to get private keys", zap.Error(err))
 		return JWKS{}, err
 	}
 

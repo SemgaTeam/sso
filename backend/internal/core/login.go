@@ -3,6 +3,7 @@ package core
 import (
 	e "sso/internal/core/errors"
 	"github.com/golang-jwt/jwt/v5"
+	"go.uber.org/zap"
 
 	"context"
 	"time"
@@ -36,6 +37,8 @@ type LoginInput struct {
 }
 
 func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInput) (string, error) {
+	log := getLoggerFromContext(ctx)
+
 	var user *User
 	var err error
 
@@ -55,6 +58,7 @@ func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInput) (string, 
 	}
 
 	if !user.CanLogin() {
+		log.Info("user cannot be logged in", zap.String("user_id", user.ID), zap.String("status", user.Status))
 		return "", e.UserCannotBeLoggedIn
 	}
 
@@ -76,8 +80,11 @@ func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInput) (string, 
 }
 
 func (uc *LoginUseCase) loginByEmail(ctx context.Context, input LoginInput) (*User, error) {
+	log := getLoggerFromContext(ctx)
+
 	user, err := uc.user.ByEmail(ctx, input.Email)
 	if err != nil {
+		log.Fatal("failed to get user by email", zap.Error(err), zap.String("email", input.Email))
 		return nil, err
 	}
 
@@ -90,6 +97,7 @@ func (uc *LoginUseCase) loginByEmail(ctx context.Context, input LoginInput) (*Us
 	}
 
 	if emailIdentity == nil {
+		log.Info("identity not found", zap.String("user_id", user.ID))
 		return nil, e.IdentityNotFound
 	}
 
@@ -101,10 +109,12 @@ func (uc *LoginUseCase) loginByEmail(ctx context.Context, input LoginInput) (*Us
 	}
 
 	if passwordCred == nil {
+		log.Info("credential not found", zap.String("user_id", user.ID), zap.String("identity_id", emailIdentity.ID))
 		return nil, e.CredentialNotFound
 	}
 
 	if err := uc.hash.CheckPassword(input.Password, passwordCred.Hash); err != nil {
+		log.Fatal("failed to check password", zap.Error(err))
 		return nil, err
 	}
 

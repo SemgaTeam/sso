@@ -159,7 +159,9 @@ func oauthHandler(oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
 
 func jwksHandler(jwksUC *core.GetPublicKeysUseCase) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		keys, err := jwksUC.Execute()
+		ctx := c.Request().Context()
+
+		keys, err := jwksUC.Execute(ctx)
 		if err != nil {
 			return err
 		}

@@ -11,9 +11,15 @@ RUN go build -o application .
 
 FROM alpine:3.22
 
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
 WORKDIR /app
 
 COPY --from=builder /usr/src/app/application ./app
+
+RUN chown -R appuser:appgroup /app
+
+USER appuser
 
 EXPOSE 8080
 

@@ -27,7 +27,7 @@ func (i *UserInterface) ByID(ctx context.Context, id string) (*core.User, error)
 	var status string
 
 	err := i.pool.QueryRow(ctx, 
-	"SELECT name, email, status FROM users WHERE id = $1 AND status <> 'deleted'",
+	"SELECT name, email, status FROM users WHERE id = $1",
 		id,
 	).Scan(&name, &email, &status)
 	if err != nil {
@@ -94,7 +94,7 @@ func (i *UserInterface) ByEmail(ctx context.Context, email string) (*core.User, 
 	var status string
 
 	err := i.pool.QueryRow(ctx,
-		"SELECT id, name, status FROM users WHERE email = $1 AND status <> 'deleted'",
+		"SELECT id, name, status FROM users WHERE email = $1",
 		email,
 	).Scan(&id, &name, &status)
 
@@ -126,7 +126,7 @@ func (i *UserInterface) ByName(ctx context.Context, name string) (*core.User, er
 	var status string
 
 	err := i.pool.QueryRow(ctx, 
-	"SELECT id, email, status FROM users WHERE name = $1 AND status <> 'deleted'",
+	"SELECT id, email, status FROM users WHERE name = $1",
 		name,
 	).Scan(&id, &email, &status)
 

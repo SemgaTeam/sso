@@ -53,7 +53,7 @@ func (w *OAuthWorkflow) Execute(ctx context.Context, userID, clientID, redirectU
 		return "", err
 	}
 
-	return code, nil
+	return redirectURI + "?code=" + code, nil
 }
 
 func (w *OAuthWorkflow) ExchangeCode(ctx context.Context, authCode, clientID, clientSecret, redirectURI, userID string) (string, string, error) {

@@ -46,8 +46,9 @@ func TestOAuthWorkflowSuccess(t *testing.T) {
 
 	accessExpiration := 60*60
 	refreshExpiration := 60*60*24
+	authCodeExpiration := 5*60
 
-	oauthWorkflow := core.NewOAuthWorkflow(clientRepo, tokenRepo, keyRepo, codesRepo, accessExpiration, refreshExpiration)
+	oauthWorkflow := core.NewOAuthWorkflow(clientRepo, tokenRepo, keyRepo, codesRepo, accessExpiration, refreshExpiration, authCodeExpiration)
 
 	ctx := context.Background()
 	userID := "user_id"

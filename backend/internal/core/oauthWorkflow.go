@@ -15,9 +15,10 @@ type OAuthWorkflow struct {
 
 	accessExpiration int
 	refreshExpiration int
+	authCodeExpiration int
 }
 
-func NewOAuthWorkflow(clientInterface IClient, tokenInterface IToken, keyInterface IPrivateKeys, codesInterface IAuthCodes, accessExpiration, refreshExpiration int) *OAuthWorkflow {
+func NewOAuthWorkflow(clientInterface IClient, tokenInterface IToken, keyInterface IPrivateKeys, codesInterface IAuthCodes, accessExpiration, refreshExpiration, authCodeExpiration int) *OAuthWorkflow {
 	return &OAuthWorkflow{
 		client: clientInterface,
 		token: tokenInterface,
@@ -25,6 +26,7 @@ func NewOAuthWorkflow(clientInterface IClient, tokenInterface IToken, keyInterfa
 		authCodes: codesInterface,
 		accessExpiration: accessExpiration,
 		refreshExpiration: refreshExpiration,
+		authCodeExpiration: authCodeExpiration,
 	}
 }
 
@@ -47,8 +49,7 @@ func (w *OAuthWorkflow) Execute(ctx context.Context, userID, clientID, redirectU
 		return "", e.RedirectURINotAllowed
 	}
 
-	authCodeTTL := 5*60
-	code, err := w.authCodes.Issue(client.ID, redirectURI, userID, authCodeTTL)
+	code, err := w.authCodes.Issue(client.ID, redirectURI, userID, w.authCodeExpiration)
 	if err != nil {
 		log.Fatal("failed to issue access token", zap.Error(err))
 		return "", err

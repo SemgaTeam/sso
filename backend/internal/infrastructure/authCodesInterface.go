@@ -44,8 +44,9 @@ func (i *AuthCodesInterface) Issue(clientID, redirectURI, userID string, ttl int
 func (i *AuthCodesInterface) Get(code string) (string, string, string, error) {
 	var authCode *AuthCode
 	for _, c := range i.codes {
-		if c.raw == code {
+		if c.raw == code && c.expiration.After(time.Now()) {
 			authCode = &c
+			break
 		}
 	}
 

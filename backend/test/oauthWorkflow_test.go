@@ -2,11 +2,12 @@ package test
 
 import (
 	"sso/internal/core"
+	"sso/internal/infrastructure"
 	"github.com/stretchr/testify/require"
 
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
-	"context"
 	"testing"
 	"time"
 )
@@ -41,20 +42,20 @@ func TestOAuthWorkflowSuccess(t *testing.T) {
 		},
 	}
 
+	codesRepo := infrastructure.NewAuthCodesInterface()
+
 	accessExpiration := 60*60
 	refreshExpiration := 60*60*24
 
-	oauthWorkflow := core.NewOAuthWorkflow(clientRepo, tokenRepo, keyRepo, accessExpiration, refreshExpiration)
+	oauthWorkflow := core.NewOAuthWorkflow(clientRepo, tokenRepo, keyRepo, codesRepo, accessExpiration, refreshExpiration)
 
 	ctx := context.Background()
 	userID := "user_id"
 
-	accessToken, refreshToken, err := oauthWorkflow.Execute(ctx, userID, "id1", "test.client.com")
+	authCode, err := oauthWorkflow.Execute(ctx, userID, "id1", "test.client.com")
 
 	require.NoError(t, err)
-	require.NotEmpty(t, accessToken)
-	require.NotEmpty(t, refreshToken)
+	require.NotEmpty(t, authCode)
 
-	t.Logf("access: %s", accessToken)
-	t.Logf("refresh: %s", refreshToken)
+	t.Logf("refresh: %s", authCode)
 }

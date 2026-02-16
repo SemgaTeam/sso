@@ -17,11 +17,12 @@ type OAuthWorkflow struct {
 	refreshExpiration int
 }
 
-func NewOAuthWorkflow(clientInterface IClient, tokenInterface IToken, keyInterface IPrivateKeys, accessExpiration, refreshExpiration int) *OAuthWorkflow {
+func NewOAuthWorkflow(clientInterface IClient, tokenInterface IToken, keyInterface IPrivateKeys, codesInterface IAuthCodes, accessExpiration, refreshExpiration int) *OAuthWorkflow {
 	return &OAuthWorkflow{
 		client: clientInterface,
 		token: tokenInterface,
 		keys: keyInterface,
+		authCodes: codesInterface,
 		accessExpiration: accessExpiration,
 		refreshExpiration: refreshExpiration,
 	}

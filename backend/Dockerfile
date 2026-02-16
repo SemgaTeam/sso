@@ -11,7 +11,7 @@ RUN go build -o application .
 
 FROM alpine:3.22
 
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN addgroup --gid 1000 appgroup && adduser --uid 1000 -G appgroup --disabled-password appuser
 
 WORKDIR /app
 

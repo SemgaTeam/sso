@@ -60,6 +60,7 @@ func main() {
 	userInterface := infrastructure.NewUserInterface(pool)
 	hashInterface := infrastructure.NewHashInterface(conf.HashCost)
 	keysInterface := infrastructure.NewKeyInterface()
+	codesInterface := infrastructure.NewAuthCodesInterface()
 
 	log.Log.Info("Initialized interfaces")
 
@@ -70,7 +71,7 @@ func main() {
 	}
 	keysInterface.SavePrivateKey(privateKey)
 
-	oauthWorkflow := core.NewOAuthWorkflow(clientInterface, tokenInterface, keysInterface, conf.AccessTokenExp, conf.RefreshTokenExp)
+	oauthWorkflow := core.NewOAuthWorkflow(clientInterface, tokenInterface, keysInterface, codesInterface, conf.AccessTokenExp, conf.RefreshTokenExp)
 
 	loginUC := core.NewLoginUseCase(userInterface, tokenInterface, hashInterface, conf.SessionExp)
 	registerUC := core.NewRegisterUseCase(userInterface, tokenInterface, hashInterface, conf.SessionExp)

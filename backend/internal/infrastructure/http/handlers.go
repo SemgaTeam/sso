@@ -144,16 +144,12 @@ func oauthHandler(oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
 			return err
 		}
 
-		accessToken, refreshToken, err := oauthWorkflow.Execute(ctx, userID, request["client_id"], request["redirect_uri"])
+		redirectURI, err := oauthWorkflow.Execute(ctx, userID, request["client_id"], request["redirect_uri"])
 		if err != nil {
 			return err
 		}
 
-		return c.JSON(http.StatusOK, map[string]any{
-			"access_token": accessToken,
-			"refresh_token": refreshToken,
-		})
-
+		return c.Redirect(http.StatusSeeOther, redirectURI)
 	}
 }
 

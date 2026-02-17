@@ -33,4 +33,6 @@ var (
 	UniqueViolated = NewError("unique constraint violated")
 
 	InvalidAuthProvider = NewError("invalid authentication provider")
+	AuthCodeNotFound = NewError("authentication code not found")
+	InvalidAuthCode = NewError("authentication code is invalid")
 )

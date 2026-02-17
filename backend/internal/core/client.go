@@ -10,6 +10,7 @@ type Client struct {
 	ID string `json:"id"`
 	Name string
 	ClientID string
+	ClientSecret string
 	RedirectURIs []string
 	Status string
 	CreatedAt time.Time

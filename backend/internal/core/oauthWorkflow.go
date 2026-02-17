@@ -51,7 +51,7 @@ func (w *OAuthWorkflow) Execute(ctx context.Context, userID, clientID, redirectU
 
 	code, err := w.authCodes.Issue(client.ID, redirectURI, userID, w.authCodeExpiration)
 	if err != nil {
-		log.Fatal("failed to issue access token", zap.Error(err))
+		log.Fatal("failed to issue authentication code", zap.Error(err))
 		return "", err
 	}
 

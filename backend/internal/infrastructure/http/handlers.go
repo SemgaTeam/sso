@@ -149,7 +149,7 @@ func oauthHandler(oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
 			return err
 		}
 
-		return c.Redirect(http.StatusPermanentRedirect, redirectURI)
+		return c.Redirect(http.StatusSeeOther, redirectURI)
 	}
 }
 

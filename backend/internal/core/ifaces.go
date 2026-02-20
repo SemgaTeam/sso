@@ -36,9 +36,3 @@ type IPrivateKeys interface {
 	SavePrivateKey(*PrivateKey) error
 	Generate(name string) (*PrivateKey, error)
 }
-
-type IAuthCodes interface {
-	Issue(clientID, redirectURI, userID string, ttl int) (code string, err error)
-	Get(code string) (clientID, redirectURI, userID string, err error)
-	Delete(code string) error
-}

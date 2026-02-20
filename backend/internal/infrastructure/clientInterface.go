@@ -23,15 +23,15 @@ func NewClientInterface(pool *pgxpool.Pool) *ClientInterface {
 }
 
 func (i *ClientInterface) ByID(ctx context.Context, clientID string) (*core.Client, error) {
-	var id, name, status string
+	var id, cid, name, status string
 	var redirectURIs []string
 	var clientSecret string
 	var createdAt time.Time
 
 	err := i.pool.QueryRow(ctx,
-		"SELECT id, name, status, redirect_uris, client_secret, created_at FROM clients WHERE client_id = $1",
+		"SELECT id, client_id, name, status, redirect_uris, client_secret, created_at FROM clients WHERE client_id = $1",
 		clientID,
-	).Scan(&id, &name, &status, &redirectURIs, &clientSecret, &createdAt)
+	).Scan(&id, &cid, &name, &status, &redirectURIs, &clientSecret, &createdAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -43,6 +43,7 @@ func (i *ClientInterface) ByID(ctx context.Context, clientID string) (*core.Clie
 
 	client := core.Client{
 		ID:           id,
+		ClientID:     cid,
 		Name:         name,
 		Status:       status,
 		RedirectURIs: redirectURIs,

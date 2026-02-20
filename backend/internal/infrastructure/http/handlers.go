@@ -2,11 +2,13 @@ package http
 
 import (
 	"sso/internal/core"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 
 	"errors"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -42,16 +44,16 @@ func loginHandler(loginUC *core.LoginUseCase, sessionExp int) echo.HandlerFunc {
 		switch provider {
 		case "email":
 			request := map[string]string{
-				"email": "",
+				"email":    "",
 				"password": "",
 			}
 			if err := c.Bind(&request); err != nil {
 				return err
 			}
-			
+
 			input = core.LoginInput{
 				Provider: "email",
-				Email: request["email"],
+				Email:    request["email"],
 				Password: request["password"],
 			}
 		case "oauth":
@@ -59,10 +61,10 @@ func loginHandler(loginUC *core.LoginUseCase, sessionExp int) echo.HandlerFunc {
 
 			input = core.LoginInput{
 				Provider: "oauth",
-				
-				Issuer: idToken["issuer"],
+
+				Issuer:     idToken["issuer"],
 				ExternalID: idToken["sub"],
-				Token: idToken,
+				Token:      idToken,
 			}
 		}
 
@@ -94,8 +96,8 @@ func registerHandler(registerUC *core.RegisterUseCase, sessionExp int) echo.Hand
 		switch provider {
 		case "email":
 			request := map[string]string{
-				"name": "",
-				"email": "",
+				"name":     "",
+				"email":    "",
 				"password": "",
 			}
 
@@ -105,8 +107,8 @@ func registerHandler(registerUC *core.RegisterUseCase, sessionExp int) echo.Hand
 
 			input = core.RegisterInput{
 				Provider: "email",
-				Name: request["name"],
-				Email: request["email"],
+				Name:     request["name"],
+				Email:    request["email"],
 				Password: request["password"],
 			}
 
@@ -115,10 +117,10 @@ func registerHandler(registerUC *core.RegisterUseCase, sessionExp int) echo.Hand
 
 			input = core.RegisterInput{
 				Provider: "oauth",
-				
-				Issuer: idToken["issuer"],
+
+				Issuer:     idToken["issuer"],
 				ExternalID: idToken["sub"],
-				Token: idToken,
+				Token:      idToken,
 			}
 		}
 
@@ -137,8 +139,9 @@ func oauthHandler(oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
 		ctx := c.Request().Context()
 
 		request := map[string]string{
-			"client_id": "",
+			"client_id":    "",
 			"redirect_uri": "",
+			"state":        "",
 		}
 
 		if err := c.Bind(&request); err != nil {
@@ -157,12 +160,28 @@ func oauthHandler(oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
 			return err
 		}
 
-		redirectURI, err := oauthWorkflow.Execute(ctx, userID, request["client_id"], request["redirect_uri"])
-		if err != nil {
+		req := c.Request().Clone(ctx)
+		req.Method = http.MethodGet
+		req.URL.RawQuery = url.Values{
+			"response_type": {"code"},
+			"client_id":     {request["client_id"]},
+			"redirect_uri":  {request["redirect_uri"]},
+			"state":         {request["state"]},
+		}.Encode()
+
+		return oauthWorkflow.WriteAuthorizeResponse(ctx, req, c.Response().Writer, userID)
+	}
+}
+
+func oauthTokenHandler(oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.Request().Context()
+
+		if err := oauthWorkflow.WriteAccessResponse(ctx, c.Request(), c.Response().Writer); err != nil {
 			return err
 		}
 
-		return c.Redirect(http.StatusSeeOther, redirectURI)
+		return nil
 	}
 }
 

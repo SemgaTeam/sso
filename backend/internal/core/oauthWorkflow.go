@@ -1,135 +1,138 @@
 package core
 
 import (
-	e "sso/internal/core/errors"
-	"go.uber.org/zap"
+	"crypto/sha256"
+	"github.com/ory/fosite"
+	"github.com/ory/fosite/compose"
+	"github.com/ory/fosite/storage"
+	"slices"
 
 	"context"
+	"net/http"
+	"time"
 )
 
 type OAuthWorkflow struct {
-	client IClient
-	token IToken
-	keys IPrivateKeys
-	authCodes IAuthCodes
-
-	accessExpiration int
-	refreshExpiration int
-	authCodeExpiration int
+	oauth2 fosite.OAuth2Provider
 }
 
-func NewOAuthWorkflow(clientInterface IClient, tokenInterface IToken, keyInterface IPrivateKeys, codesInterface IAuthCodes, accessExpiration, refreshExpiration, authCodeExpiration int) *OAuthWorkflow {
+func NewOAuthWorkflow(clientInterface IClient, globalSecret string, accessExpiration, refreshExpiration, authCodeExpiration int) *OAuthWorkflow {
+	normalizedSecret := normalizeGlobalSecret(globalSecret)
+
+	cfg := &fosite.Config{
+		AccessTokenLifespan:        time.Duration(accessExpiration) * time.Second,
+		RefreshTokenLifespan:       time.Duration(refreshExpiration) * time.Second,
+		AuthorizeCodeLifespan:      time.Duration(authCodeExpiration) * time.Second,
+		GlobalSecret:               normalizedSecret,
+		RefreshTokenScopes:         []string{},
+		ClientSecretsHasher:        plaintextHasher{},
+		SendDebugMessagesToClients: true,
+	}
+
+	storage := newOAuthStorage(clientInterface)
+	oauth2 := compose.Compose(
+		cfg,
+		storage,
+		compose.NewOAuth2HMACStrategy(cfg),
+		compose.OAuth2AuthorizeExplicitFactory,
+		compose.OAuth2RefreshTokenGrantFactory,
+	)
+
 	return &OAuthWorkflow{
-		client: clientInterface,
-		token: tokenInterface,
-		keys: keyInterface,
-		authCodes: codesInterface,
-		accessExpiration: accessExpiration,
-		refreshExpiration: refreshExpiration,
-		authCodeExpiration: authCodeExpiration,
+		oauth2: oauth2,
 	}
 }
 
-func (w *OAuthWorkflow) Execute(ctx context.Context, userID, clientID, redirectURI string) (string, error) {
-	log := getLoggerFromContext(ctx)
-
-	client, err := w.client.ByID(ctx, clientID)
-	if err != nil {
-		log.Fatal("failed to get client by id", zap.Error(err), zap.String("client_id", clientID))
-		return "", err
+func normalizeGlobalSecret(secret string) []byte {
+	raw := []byte(secret)
+	if len(raw) >= 32 {
+		return raw
 	}
 
-	if client == nil {
-		log.Info("client not found", zap.String("client_id", clientID))
-		return "", e.ClientNotFound
-	}
-
-	if !client.AllowsRedirect(redirectURI) {
-		log.Info("redirect is not allowed", zap.String("client_id", clientID), zap.String("redirect_uri", redirectURI))
-		return "", e.RedirectURINotAllowed
-	}
-
-	code, err := w.authCodes.Issue(client.ID, redirectURI, userID, w.authCodeExpiration)
-	if err != nil {
-		log.Fatal("failed to issue authentication code", zap.Error(err))
-		return "", err
-	}
-
-	return redirectURI + "?code=" + code, nil
+	sum := sha256.Sum256(raw)
+	return sum[:]
 }
 
-func (w *OAuthWorkflow) ExchangeCode(ctx context.Context, authCode, clientID, clientSecret, redirectURI, userID string) (string, string, error) {
-	log := getLoggerFromContext(ctx)
-
-	client, err := w.client.ByID(ctx, clientID)
+func (w *OAuthWorkflow) WriteAuthorizeResponse(ctx context.Context, req *http.Request, rw http.ResponseWriter, userID string) error {
+	ar, err := w.oauth2.NewAuthorizeRequest(ctx, req)
 	if err != nil {
-		log.Fatal("failed to get client", zap.Error(err))
-		return "", "", err
+		w.oauth2.WriteAuthorizeError(ctx, rw, ar, err)
+		return nil
 	}
 
-	if client == nil {
-		log.Info("client not found")
-		return "", "", e.ClientNotFound
-	}
-
-	codeClientID, codeRedirectURI, codeUserID, err := w.authCodes.Get(authCode)
+	resp, err := w.oauth2.NewAuthorizeResponse(ctx, ar, &fosite.DefaultSession{
+		Subject: userID,
+	})
 	if err != nil {
-		log.Fatal("failed to get auth code", zap.Error(err))
-		return "", "", err
+		w.oauth2.WriteAuthorizeError(ctx, rw, ar, err)
+		return nil
 	}
 
-	if codeClientID == "" || codeRedirectURI == "" || codeUserID == "" {
-		log.Info("auth code not found", zap.String("code", authCode))
-		return "", "", e.AuthCodeNotFound
-	}
-
-
-	if clientID != codeClientID || redirectURI != codeRedirectURI || userID != codeUserID || client.ClientSecret != clientSecret {
-		log.Info("invalid auth code", zap.String("code", authCode))
-		return "", "", e.InvalidAuthCode
-	}
-
-	return w.tokens(ctx, clientID, userID)
+	w.oauth2.WriteAuthorizeResponse(ctx, rw, ar, resp)
+	return nil
 }
 
-func (w *OAuthWorkflow) tokens(ctx context.Context, clientID, userID string) (string, string, error) {
-	log := getLoggerFromContext(ctx)
-
-	accessClaims, err := NewClaims(clientID, userID, w.accessExpiration)
+func (w *OAuthWorkflow) WriteAccessResponse(ctx context.Context, req *http.Request, rw http.ResponseWriter) error {
+	ar, err := w.oauth2.NewAccessRequest(ctx, req, new(fosite.DefaultSession))
 	if err != nil {
-		log.Info("invalid claims", zap.Error(err))
-		return "", "", err
+		w.oauth2.WriteAccessError(ctx, rw, ar, err)
+		return nil
 	}
 
-	refreshClaims, err := NewClaims(clientID, userID, w.refreshExpiration)
+	resp, err := w.oauth2.NewAccessResponse(ctx, ar)
 	if err != nil {
-		log.Info("invalid claims", zap.Error(err))
-		return "", "", err
+		w.oauth2.WriteAccessError(ctx, rw, ar, err)
+		return nil
 	}
 
-	keys, err := w.keys.GetPrivateKeys()
+	w.oauth2.WriteAccessResponse(ctx, rw, ar, resp)
+	return nil
+}
+
+type oauthStorage struct {
+	*storage.MemoryStore
+	client IClient
+}
+
+func newOAuthStorage(client IClient) *oauthStorage {
+	return &oauthStorage{
+		MemoryStore: storage.NewMemoryStore(),
+		client:      client,
+	}
+}
+
+func (s *oauthStorage) GetClient(ctx context.Context, id string) (fosite.Client, error) {
+	client, err := s.client.ByID(ctx, id)
 	if err != nil {
-		log.Fatal("failed to get private keys", zap.Error(err))
-		return "", "", err
+		return nil, err
 	}
-	if len(keys) == 0 {
-		log.Fatal("no private keys found")
-		return "", "", e.KeysNotFound
+	if client == nil || client.Status != "active" {
+		return nil, fosite.ErrNotFound
 	}
 
-	key := keys[0]
-	
-	accessToken, err := w.token.SignWithKey(accessClaims, key)
-	if err != nil {
-		log.Fatal("failed to sign token", zap.Error(err))
-		return "", "", err
+	clientID := id
+	if client.ClientID != "" {
+		clientID = client.ClientID
 	}
 
-	refreshToken, err := w.token.SignWithKey(refreshClaims, key)
-	if err != nil {
-		log.Fatal("failed to sign token", zap.Error(err))
-		return "", "", err
-	}
+	return &fosite.DefaultClient{
+		ID:            clientID,
+		Secret:        []byte(client.ClientSecret),
+		RedirectURIs:  slices.Clone(client.RedirectURIs),
+		GrantTypes:    []string{"authorization_code", "refresh_token"},
+		ResponseTypes: []string{"code"},
+	}, nil
+}
 
-	return accessToken, refreshToken, nil
+type plaintextHasher struct{}
+
+func (plaintextHasher) Compare(_ context.Context, hash, data []byte) error {
+	if string(hash) != string(data) {
+		return fosite.ErrInvalidClient
+	}
+	return nil
+}
+
+func (plaintextHasher) Hash(_ context.Context, data []byte) ([]byte, error) {
+	return data, nil
 }

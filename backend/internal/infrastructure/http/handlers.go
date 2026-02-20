@@ -2,6 +2,7 @@ package http
 
 import (
 	"sso/internal/core"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 
@@ -27,16 +28,16 @@ func loginHandler(loginUC *core.LoginUseCase) echo.HandlerFunc {
 		switch provider {
 		case "email":
 			request := map[string]string{
-				"email": "",
+				"email":    "",
 				"password": "",
 			}
 			if err := c.Bind(&request); err != nil {
 				return err
 			}
-			
+
 			input = core.LoginInput{
 				Provider: "email",
-				Email: request["email"],
+				Email:    request["email"],
 				Password: request["password"],
 			}
 		case "oauth":
@@ -44,10 +45,10 @@ func loginHandler(loginUC *core.LoginUseCase) echo.HandlerFunc {
 
 			input = core.LoginInput{
 				Provider: "oauth",
-				
-				Issuer: idToken["issuer"],
+
+				Issuer:     idToken["issuer"],
 				ExternalID: idToken["sub"],
-				Token: idToken,
+				Token:      idToken,
 			}
 		}
 
@@ -80,8 +81,8 @@ func registerHandler(registerUC *core.RegisterUseCase) echo.HandlerFunc {
 		switch provider {
 		case "email":
 			request := map[string]string{
-				"name": "",
-				"email": "",
+				"name":     "",
+				"email":    "",
 				"password": "",
 			}
 
@@ -91,8 +92,8 @@ func registerHandler(registerUC *core.RegisterUseCase) echo.HandlerFunc {
 
 			input = core.RegisterInput{
 				Provider: "email",
-				Name: request["name"],
-				Email: request["email"],
+				Name:     request["name"],
+				Email:    request["email"],
 				Password: request["password"],
 			}
 
@@ -101,10 +102,10 @@ func registerHandler(registerUC *core.RegisterUseCase) echo.HandlerFunc {
 
 			input = core.RegisterInput{
 				Provider: "oauth",
-				
-				Issuer: idToken["issuer"],
+
+				Issuer:     idToken["issuer"],
 				ExternalID: idToken["sub"],
-				Token: idToken,
+				Token:      idToken,
 			}
 		}
 
@@ -124,7 +125,7 @@ func oauthHandler(oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
 		ctx := c.Request().Context()
 
 		request := map[string]string{
-			"client_id": "",
+			"client_id":    "",
 			"redirect_uri": "",
 		}
 
@@ -150,6 +151,47 @@ func oauthHandler(oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
 		}
 
 		return c.Redirect(http.StatusSeeOther, redirectURI)
+	}
+}
+
+func exchangeCodeHandler(oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.Request().Context()
+
+		code := c.QueryParam("code")
+		if code == "" {
+			return BadRequest("code is not specified")
+		}
+
+		request := map[string]string{
+			"client_secret": "",
+			"client_id":     "",
+			"user_id":       "",
+			"redirect_uri":  "",
+		}
+
+		if err := c.Bind(&request); err != nil {
+			return err
+		}
+
+		accessToken, refreshToken, err := oauthWorkflow.ExchangeCode(
+			ctx,
+			code,
+			request["client_id"],
+			request["client_secret"],
+			request["redirect_uri"],
+			request["userID"],
+		)
+		if err != nil {
+			return err
+		}
+
+		response := map[string]string{
+			"access_token":  accessToken,
+			"refresh_token": refreshToken,
+		}
+
+		return c.JSON(http.StatusOK, response)
 	}
 }
 

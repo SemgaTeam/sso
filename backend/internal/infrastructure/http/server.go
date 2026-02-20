@@ -1,9 +1,10 @@
 package http
 
 import (
-	"sso/internal/core"
 	"sso/internal/config"
+	"sso/internal/core"
 	e "sso/internal/core/errors"
+
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -16,9 +17,9 @@ import (
 
 func SetupHandlers(conf *config.Config, e *echo.Echo, baseLogger *zap.Logger, userUC *core.UserUseCase, loginUC *core.LoginUseCase, registerUC *core.RegisterUseCase, oauthWorkflow *core.OAuthWorkflow, jwksUC *core.GetPublicKeysUseCase) {
 	tokenMiddleware := echojwt.WithConfig(echojwt.Config{
-		SigningKey: []byte(conf.SigningKey),
-		TokenLookup: "cookie:sso_session_token",
-		ContextKey: "sso_session_token",
+		SigningKey:    []byte(conf.SigningKey),
+		TokenLookup:   "cookie:sso_session_token",
+		ContextKey:    "sso_session_token",
 		SigningMethod: conf.SigningMethod.Alg(),
 	})
 
@@ -28,6 +29,7 @@ func SetupHandlers(conf *config.Config, e *echo.Echo, baseLogger *zap.Logger, us
 	auth.POST("/login", loginHandler(loginUC))
 	auth.POST("/register", registerHandler(registerUC))
 	auth.POST("/token", oauthHandler(oauthWorkflow), tokenMiddleware)
+	auth.POST("/exchange", exchangeCodeHandler(oauthWorkflow))
 
 	e.GET("/.well-known/jwks.json", jwksHandler(jwksUC))
 }
@@ -37,6 +39,8 @@ func errorHandler(err error, c echo.Context) {
 	var echoErr *echo.HTTPError
 
 	switch {
+	case errors.As(err, &httpErr):
+		break
 	case errors.As(err, &echoErr):
 		httpErr.Code = echoErr.Code
 		httpErr.Message = echoErr.Message.(string)
@@ -67,7 +71,7 @@ func errorHandler(err error, c echo.Context) {
 		httpErr = BadRequest("invalid authentication provider")
 
 	default:
-		httpErr = Internal("internal server error")	
+		httpErr = Internal("internal server error")
 	}
 
 	if !c.Response().Committed {
@@ -79,7 +83,7 @@ func errorHandler(err error, c echo.Context) {
 
 func initMiddleware(e *echo.Echo, baseLogger *zap.Logger) {
 	loggerMiddleware := func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func (c echo.Context) error {
+		return func(c echo.Context) error {
 			reqID := c.Response().Header().Get(echo.HeaderXRequestID)
 
 			logger := baseLogger.With(zap.String("request_id", reqID))
@@ -96,10 +100,10 @@ func initMiddleware(e *echo.Echo, baseLogger *zap.Logger) {
 	e.HTTPErrorHandler = errorHandler
 
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
-		LogStatus: true,
-		LogURIPath: true,
-		LogMethod: true,
-		LogError: true,
+		LogStatus:    true,
+		LogURIPath:   true,
+		LogMethod:    true,
+		LogError:     true,
 		LogRequestID: true,
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
 			fields := []zap.Field{zap.String("request_id", v.RequestID)}

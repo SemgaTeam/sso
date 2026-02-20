@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 )
 
 type FakeClientRepository struct {
@@ -193,3 +194,43 @@ func (r *FakeHashRepository) CheckPassword(raw, hash string) error {
 	return nil
 }
 
+type fakeAuthCode struct {
+	clientID    string
+	redirectURI string
+	userID      string
+	expiresAt   time.Time
+}
+
+type FakeAuthCodesRepository struct {
+	codes map[string]fakeAuthCode
+}
+
+func (r *FakeAuthCodesRepository) Issue(clientID, redirectURI, userID string, ttl int) (string, error) {
+	if r.codes == nil {
+		r.codes = map[string]fakeAuthCode{}
+	}
+
+	code := fmt.Sprintf("code-%d", len(r.codes)+1)
+	r.codes[code] = fakeAuthCode{
+		clientID:    clientID,
+		redirectURI: redirectURI,
+		userID:      userID,
+		expiresAt:   time.Now().Add(time.Duration(ttl) * time.Second),
+	}
+
+	return code, nil
+}
+
+func (r *FakeAuthCodesRepository) Get(code string) (string, string, string, error) {
+	authCode, ok := r.codes[code]
+	if !ok || authCode.expiresAt.Before(time.Now()) {
+		return "", "", "", nil
+	}
+
+	return authCode.clientID, authCode.redirectURI, authCode.userID, nil
+}
+
+func (r *FakeAuthCodesRepository) Delete(code string) error {
+	delete(r.codes, code)
+	return nil
+}

@@ -2,30 +2,31 @@ package core
 
 import (
 	e "sso/internal/core/errors"
+
 	"go.uber.org/zap"
 
 	"context"
 )
 
 type OAuthWorkflow struct {
-	client IClient
-	token IToken
-	keys IPrivateKeys
+	client    IClient
+	token     IToken
+	keys      IPrivateKeys
 	authCodes IAuthCodes
 
-	accessExpiration int
-	refreshExpiration int
+	accessExpiration   int
+	refreshExpiration  int
 	authCodeExpiration int
 }
 
 func NewOAuthWorkflow(clientInterface IClient, tokenInterface IToken, keyInterface IPrivateKeys, codesInterface IAuthCodes, accessExpiration, refreshExpiration, authCodeExpiration int) *OAuthWorkflow {
 	return &OAuthWorkflow{
-		client: clientInterface,
-		token: tokenInterface,
-		keys: keyInterface,
-		authCodes: codesInterface,
-		accessExpiration: accessExpiration,
-		refreshExpiration: refreshExpiration,
+		client:             clientInterface,
+		token:              tokenInterface,
+		keys:               keyInterface,
+		authCodes:          codesInterface,
+		accessExpiration:   accessExpiration,
+		refreshExpiration:  refreshExpiration,
 		authCodeExpiration: authCodeExpiration,
 	}
 }
@@ -49,7 +50,7 @@ func (w *OAuthWorkflow) Execute(ctx context.Context, userID, clientID, redirectU
 		return "", e.RedirectURINotAllowed
 	}
 
-	code, err := w.authCodes.Issue(client.ID, redirectURI, userID, w.authCodeExpiration)
+	code, err := w.authCodes.Issue(client.ClientID, redirectURI, userID, w.authCodeExpiration)
 	if err != nil {
 		log.Fatal("failed to issue authentication code", zap.Error(err))
 		return "", err
@@ -83,9 +84,8 @@ func (w *OAuthWorkflow) ExchangeCode(ctx context.Context, authCode, clientID, cl
 		return "", "", e.AuthCodeNotFound
 	}
 
-
 	if clientID != codeClientID || redirectURI != codeRedirectURI || userID != codeUserID || client.ClientSecret != clientSecret {
-		log.Info("invalid auth code", zap.String("code", authCode))
+		log.Info("invalid auth code", zap.String("code", authCode), zap.String("client_secret", client.ClientSecret), zap.String("user_id", codeUserID), zap.String("client_id", codeClientID))
 		return "", "", e.InvalidAuthCode
 	}
 
@@ -118,7 +118,7 @@ func (w *OAuthWorkflow) tokens(ctx context.Context, clientID, userID string) (st
 	}
 
 	key := keys[0]
-	
+
 	accessToken, err := w.token.SignWithKey(accessClaims, key)
 	if err != nil {
 		log.Fatal("failed to sign token", zap.Error(err))

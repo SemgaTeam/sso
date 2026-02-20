@@ -1,48 +1,56 @@
 package http
 
+import (
+	"strconv"
+)
+
 type HTTPError struct {
-	Code int
+	Code    int
 	Message string
+}
+
+func (e HTTPError) Error() string {
+	return strconv.Itoa(e.Code) + e.Message
 }
 
 func NewError(code int, msg string) HTTPError {
 	return HTTPError{
-		Code: code,
+		Code:    code,
 		Message: msg,
 	}
 }
 
 func NotFound(msg string) HTTPError {
 	return HTTPError{
-		Code: 404,
+		Code:    404,
 		Message: msg,
 	}
 }
 
 func Forbidden(msg string) HTTPError {
 	return HTTPError{
-		Code: 403,
+		Code:    403,
 		Message: msg,
 	}
 }
 
 func Unauthorized(msg string) HTTPError {
 	return HTTPError{
-		Code: 401,
+		Code:    401,
 		Message: msg,
 	}
 }
 
 func BadRequest(msg string) HTTPError {
 	return HTTPError{
-		Code: 400,
+		Code:    400,
 		Message: msg,
 	}
 }
 
 func Internal(msg string) HTTPError {
 	return HTTPError{
-		Code: 500,
+		Code:    500,
 		Message: msg,
 	}
 }

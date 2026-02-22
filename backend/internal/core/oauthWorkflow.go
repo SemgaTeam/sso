@@ -2,10 +2,11 @@ package core
 
 import (
 	"crypto/sha256"
+	"sync"
+
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/compose"
 	"github.com/ory/fosite/storage"
-	"slices"
 
 	"context"
 	"net/http"
@@ -92,12 +93,21 @@ func (w *OAuthWorkflow) WriteAccessResponse(ctx context.Context, req *http.Reque
 type oauthStorage struct {
 	*storage.MemoryStore
 	client IClient
+
+	authorizeCodes      map[string]authorizeCodeRecord
+	authorizeCodesMutex sync.RWMutex
+}
+
+type authorizeCodeRecord struct {
+	active bool
+	req    fosite.Requester
 }
 
 func newOAuthStorage(client IClient) *oauthStorage {
 	return &oauthStorage{
-		MemoryStore: storage.NewMemoryStore(),
-		client:      client,
+		MemoryStore:    storage.NewMemoryStore(),
+		client:         client,
+		authorizeCodes: map[string]authorizeCodeRecord{},
 	}
 }
 
@@ -110,18 +120,50 @@ func (s *oauthStorage) GetClient(ctx context.Context, id string) (fosite.Client,
 		return nil, fosite.ErrNotFound
 	}
 
-	clientID := id
-	if client.ClientID != "" {
-		clientID = client.ClientID
+	return client, nil
+}
+
+func (s *oauthStorage) CreateAuthorizeCodeSession(_ context.Context, code string, request fosite.Requester) error {
+	s.authorizeCodesMutex.Lock()
+	defer s.authorizeCodesMutex.Unlock()
+
+	s.authorizeCodes[code] = authorizeCodeRecord{
+		active: true,
+		req:    request,
 	}
 
-	return &fosite.DefaultClient{
-		ID:            clientID,
-		Secret:        []byte(client.ClientSecret),
-		RedirectURIs:  slices.Clone(client.RedirectURIs),
-		GrantTypes:    []string{"authorization_code", "refresh_token"},
-		ResponseTypes: []string{"code"},
-	}, nil
+	return nil
+}
+
+func (s *oauthStorage) GetAuthorizeCodeSession(_ context.Context, code string, _ fosite.Session) (fosite.Requester, error) {
+	s.authorizeCodesMutex.RLock()
+	defer s.authorizeCodesMutex.RUnlock()
+
+	record, exists := s.authorizeCodes[code]
+	if !exists {
+		return nil, fosite.ErrNotFound
+	}
+
+	if !record.active {
+		return record.req, fosite.ErrInvalidatedAuthorizeCode
+	}
+
+	return record.req, nil
+}
+
+func (s *oauthStorage) InvalidateAuthorizeCodeSession(_ context.Context, code string) error {
+	s.authorizeCodesMutex.Lock()
+	defer s.authorizeCodesMutex.Unlock()
+
+	record, exists := s.authorizeCodes[code]
+	if !exists {
+		return fosite.ErrNotFound
+	}
+
+	record.active = false
+	s.authorizeCodes[code] = record
+
+	return nil
 }
 
 type plaintextHasher struct{}

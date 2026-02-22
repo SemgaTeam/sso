@@ -1,13 +1,14 @@
 package http
 
 import (
+	"sso/internal/config"
+	"sso/internal/core"
+	e "sso/internal/core/errors"
+
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"go.uber.org/zap"
-	"sso/internal/config"
-	"sso/internal/core"
-	e "sso/internal/core/errors"
 
 	"context"
 	"errors"
@@ -28,8 +29,10 @@ func SetupHandlers(conf *config.Config, e *echo.Echo, baseLogger *zap.Logger, us
 	auth.POST("/login", loginHandler(loginUC, conf.SessionExp))
 	auth.POST("/register", registerHandler(registerUC, conf.SessionExp))
 	auth.GET("/me", currentUserHandler(userUC), tokenMiddleware)
-	auth.POST("/token", oauthHandler(oauthWorkflow), tokenMiddleware)
-	e.POST("/oauth/token", oauthTokenHandler(oauthWorkflow))
+
+	oauth := e.Group("/oauth2")
+	oauth.GET("/auth", oauthHandler(oauthWorkflow), tokenMiddleware)
+	oauth.POST("/token", oauthTokenHandler(oauthWorkflow))
 
 	e.GET("/.well-known/jwks.json", jwksHandler(jwksUC))
 }

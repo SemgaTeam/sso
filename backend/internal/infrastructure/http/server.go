@@ -33,7 +33,7 @@ func SetupHandlers(conf *config.Config, e *echo.Echo, baseLogger *zap.Logger, us
 	oauth := e.Group("/oauth2")
 	oauth.GET("/auth", oauthHandler(oauthWorkflow), tokenMiddleware)
 	oauth.POST("/token", oauthTokenHandler(oauthWorkflow))
-	oauth.GET("/userinfo", userInfoHandler(oauthWorkflow, userUC))
+	oauth.GET("/userinfo", userInfoHandler(oauthWorkflow))
 
 	e.GET("/.well-known/jwks.json", jwksHandler(jwksUC))
 }

@@ -15,10 +15,17 @@ import (
 )
 
 type OAuthWorkflow struct {
-	oauth2 fosite.OAuth2Provider
+	oauth2        fosite.OAuth2Provider
+	allowedScopes map[string]struct{}
+	user          IUser
 }
 
-func NewOAuthWorkflow(clientInterface IClient, globalSecret string, accessExpiration, refreshExpiration, authCodeExpiration int) *OAuthWorkflow {
+type AccessTokenInfo struct {
+	Subject string
+	Scopes  []string
+}
+
+func NewOAuthWorkflow(clientInterface IClient, userInterface IUser, globalSecret string, accessExpiration, refreshExpiration, authCodeExpiration int) *OAuthWorkflow {
 	normalizedSecret := normalizeGlobalSecret(globalSecret)
 
 	cfg := &fosite.Config{
@@ -42,6 +49,12 @@ func NewOAuthWorkflow(clientInterface IClient, globalSecret string, accessExpira
 
 	return &OAuthWorkflow{
 		oauth2: oauth2,
+		allowedScopes: map[string]struct{}{
+			"profile": {},
+			"email":   {},
+			"status":  {},
+		},
+		user: userInterface,
 	}
 }
 
@@ -60,6 +73,22 @@ func (w *OAuthWorkflow) WriteAuthorizeResponse(ctx context.Context, req *http.Re
 	if err != nil {
 		w.oauth2.WriteAuthorizeError(ctx, rw, ar, err)
 		return nil
+	}
+
+	clientScopes := ar.GetClient().GetScopes()
+	for _, scope := range ar.GetRequestedScopes() {
+		if _, exists := w.allowedScopes[scope]; !exists {
+			w.oauth2.WriteAuthorizeError(ctx, rw, ar, fosite.ErrInvalidScope.WithHintf("scope '%s' is not supported", scope))
+			return nil
+		}
+		if !clientScopes.Has(scope) {
+			w.oauth2.WriteAuthorizeError(ctx, rw, ar, fosite.ErrInvalidScope.WithHintf("client is not allowed to request scope '%s'", scope))
+			return nil
+		}
+	}
+
+	for _, scope := range ar.GetRequestedScopes() {
+		ar.GrantScope(scope)
 	}
 
 	resp, err := w.oauth2.NewAuthorizeResponse(ctx, ar, &fosite.DefaultSession{
@@ -91,23 +120,64 @@ func (w *OAuthWorkflow) WriteAccessResponse(ctx context.Context, req *http.Reque
 	return nil
 }
 
-func (w *OAuthWorkflow) SubjectByAccessToken(ctx context.Context, token string) (string, error) {
+func (w *OAuthWorkflow) AccessTokenInfoByToken(ctx context.Context, token string) (*AccessTokenInfo, error) {
 	_, requester, err := w.oauth2.IntrospectToken(ctx, token, fosite.AccessToken, new(fosite.DefaultSession))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	session := requester.GetSession()
 	if session == nil {
-		return "", errors.New("token session is missing")
+		return nil, errors.New("token session is missing")
 	}
 
 	subject := session.GetSubject()
 	if subject == "" {
-		return "", errors.New("token subject is missing")
+		return nil, errors.New("token subject is missing")
 	}
 
-	return subject, nil
+	return &AccessTokenInfo{
+		Subject: subject,
+		Scopes:  requester.GetGrantedScopes(),
+	}, nil
+}
+
+func (w *OAuthWorkflow) UserInfo(ctx context.Context, token string) (map[string]any, error) {
+	tokenInfo, err := w.AccessTokenInfoByToken(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+
+	response := map[string]any{
+		"sub": tokenInfo.Subject,
+	}
+
+	if len(tokenInfo.Scopes) != 0 {
+		user, err := w.user.ByID(ctx, tokenInfo.Subject)
+		if err != nil {
+			return nil, err
+		}
+		if user == nil {
+			return nil, errors.New("user not found")
+		}
+
+		for _, scope := range tokenInfo.Scopes {
+			if _, exists := w.allowedScopes[scope]; !exists {
+				return nil, errors.New("scope is not allowed")
+			}
+
+			switch scope {
+			case "profile":
+				response["name"] = user.Name
+			case "email":
+				response["email"] = user.Email
+			case "status":
+				response["status"] = user.Status
+			}
+		}
+	}
+
+	return response, nil
 }
 
 type oauthStorage struct {

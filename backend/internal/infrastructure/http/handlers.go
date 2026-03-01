@@ -143,6 +143,7 @@ func oauthHandler(oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
 			"client_id":    "",
 			"redirect_uri": "",
 			"state":        "",
+			"scope":        "",
 		}
 
 		if err := c.Bind(&request); err != nil {
@@ -168,6 +169,7 @@ func oauthHandler(oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
 			"client_id":     {request["client_id"]},
 			"redirect_uri":  {request["redirect_uri"]},
 			"state":         {request["state"]},
+			"scope":         {request["scope"]},
 		}.Encode()
 
 		return oauthWorkflow.WriteAuthorizeResponse(ctx, req, c.Response().Writer, userID)
@@ -211,10 +213,11 @@ func currentUserHandler(userUC *core.UserUseCase) echo.HandlerFunc {
 	}
 }
 
-func userInfoHandler(oauthWorkflow *core.OAuthWorkflow, userUC *core.UserUseCase) echo.HandlerFunc {
+func userInfoHandler(oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 
+		// TODO: pick token from cookie
 		authorization := c.Request().Header.Get("Authorization")
 		if authorization == "" {
 			return c.JSON(http.StatusUnauthorized, map[string]string{
@@ -229,29 +232,12 @@ func userInfoHandler(oauthWorkflow *core.OAuthWorkflow, userUC *core.UserUseCase
 			})
 		}
 
-		subject, err := oauthWorkflow.SubjectByAccessToken(ctx, token)
-		if err != nil {
-			return c.JSON(http.StatusUnauthorized, map[string]string{
-				"error": "invalid access token",
-			})
-		}
-
-		user, err := userUC.Get(ctx, subject, "")
+		response, err := oauthWorkflow.UserInfo(ctx, token)
 		if err != nil {
 			return err
 		}
-		if user == nil {
-			return c.JSON(http.StatusUnauthorized, map[string]string{
-				"error": "user not found",
-			})
-		}
 
-		return c.JSON(http.StatusOK, map[string]any{
-			"sub":    user.ID,
-			"name":   user.Name,
-			"email":  user.Email,
-			"status": user.Status,
-		})
+		return c.JSON(http.StatusOK, response)
 	}
 }
 

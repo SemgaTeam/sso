@@ -23,6 +23,7 @@ func TestOAuthWorkflowSuccess(t *testing.T) {
 			ClientID:     "id1",
 			ClientSecret: "secret1",
 			RedirectURIs: []string{"https://test.client.com"},
+			Scopes:       []string{"profile", "email", "status"},
 			Status:       "active",
 			CreatedAt:    time.Now(),
 		},
@@ -35,7 +36,9 @@ func TestOAuthWorkflowSuccess(t *testing.T) {
 	refreshExpiration := 60 * 60 * 24
 	authCodeExpiration := 5 * 60
 
-	oauthWorkflow := core.NewOAuthWorkflow(clientRepo, "test-secret", accessExpiration, refreshExpiration, authCodeExpiration)
+	userRepo := &FakeUserRepository{}
+
+	oauthWorkflow := core.NewOAuthWorkflow(clientRepo, userRepo, "test-secret", accessExpiration, refreshExpiration, authCodeExpiration)
 
 	ctx := context.Background()
 	userID := "user_id"
@@ -70,6 +73,7 @@ func TestWriteAccessResponseSuccess(t *testing.T) {
 			ClientID:     "id1",
 			ClientSecret: "secret1",
 			RedirectURIs: []string{"https://test.client.com"},
+			Scopes:       []string{"profile", "email", "status"},
 			Status:       "active",
 			CreatedAt:    time.Now(),
 		},
@@ -82,7 +86,9 @@ func TestWriteAccessResponseSuccess(t *testing.T) {
 	refreshExpiration := 60 * 60 * 24
 	authCodeExpiration := 5 * 60
 
-	oauthWorkflow := core.NewOAuthWorkflow(clientRepo, "test-secret", accessExpiration, refreshExpiration, authCodeExpiration)
+	userRepo := &FakeUserRepository{}
+
+	oauthWorkflow := core.NewOAuthWorkflow(clientRepo, userRepo, "test-secret", accessExpiration, refreshExpiration, authCodeExpiration)
 	ctx := context.Background()
 
 	authorizeReq := httptest.NewRequest(http.MethodGet, "/oauth/authorize?"+url.Values{
@@ -90,6 +96,7 @@ func TestWriteAccessResponseSuccess(t *testing.T) {
 		"client_id":     {"id1"},
 		"redirect_uri":  {"https://test.client.com"},
 		"state":         {"state1234"},
+		"scope":         {"profile email"},
 	}.Encode(), nil)
 	authorizeResp := httptest.NewRecorder()
 	err := oauthWorkflow.WriteAuthorizeResponse(ctx, authorizeReq, authorizeResp, "user_id")
@@ -123,4 +130,76 @@ func TestWriteAccessResponseSuccess(t *testing.T) {
 	t.Logf("access_token: %s", payload["access_token"])
 	t.Logf("refresh_token: %s", payload["refresh_token"])
 	require.Equal(t, "bearer", payload["token_type"])
+	require.Contains(t, payload["scope"], "profile")
+	require.Contains(t, payload["scope"], "email")
+}
+
+func TestWriteAuthorizeResponseRejectsUnknownScope(t *testing.T) {
+	clients := []core.Client{
+		{
+			ID:           "1",
+			Name:         "test1",
+			ClientID:     "id1",
+			ClientSecret: "secret1",
+			RedirectURIs: []string{"https://test.client.com"},
+			Scopes:       []string{"profile", "email", "status"},
+			Status:       "active",
+			CreatedAt:    time.Now(),
+		},
+	}
+	clientRepo := &FakeClientRepository{clients}
+	userRepo := &FakeUserRepository{}
+	oauthWorkflow := core.NewOAuthWorkflow(clientRepo, userRepo, "test-secret", 3600, 86400, 300)
+
+	req := httptest.NewRequest(http.MethodGet, "/oauth/authorize?"+url.Values{
+		"response_type": {"code"},
+		"client_id":     {"id1"},
+		"redirect_uri":  {"https://test.client.com"},
+		"state":         {"state1234"},
+		"scope":         {"unknown"},
+	}.Encode(), nil)
+	rr := httptest.NewRecorder()
+
+	err := oauthWorkflow.WriteAuthorizeResponse(context.Background(), req, rr, "user_id")
+	require.NoError(t, err)
+	require.Equal(t, http.StatusSeeOther, rr.Code)
+
+	redirect, err := url.Parse(rr.Header().Get("Location"))
+	require.NoError(t, err)
+	require.Equal(t, "invalid_scope", redirect.Query().Get("error"))
+}
+
+func TestWriteAuthorizeResponseRejectsClientForbiddenScope(t *testing.T) {
+	clients := []core.Client{
+		{
+			ID:           "1",
+			Name:         "test1",
+			ClientID:     "id1",
+			ClientSecret: "secret1",
+			RedirectURIs: []string{"https://test.client.com"},
+			Scopes:       []string{"profile"},
+			Status:       "active",
+			CreatedAt:    time.Now(),
+		},
+	}
+	clientRepo := &FakeClientRepository{clients}
+	userRepo := &FakeUserRepository{}
+	oauthWorkflow := core.NewOAuthWorkflow(clientRepo, userRepo, "test-secret", 3600, 86400, 300)
+
+	req := httptest.NewRequest(http.MethodGet, "/oauth/authorize?"+url.Values{
+		"response_type": {"code"},
+		"client_id":     {"id1"},
+		"redirect_uri":  {"https://test.client.com"},
+		"state":         {"state1234"},
+		"scope":         {"email"},
+	}.Encode(), nil)
+	rr := httptest.NewRecorder()
+
+	err := oauthWorkflow.WriteAuthorizeResponse(context.Background(), req, rr, "user_id")
+	require.NoError(t, err)
+	require.Equal(t, http.StatusSeeOther, rr.Code)
+
+	redirect, err := url.Parse(rr.Header().Get("Location"))
+	require.NoError(t, err)
+	require.Equal(t, "invalid_scope", redirect.Query().Get("error"))
 }

@@ -70,7 +70,7 @@ func main() {
 	}
 	keysInterface.SavePrivateKey(privateKey)
 
-	oauthWorkflow := core.NewOAuthWorkflow(clientInterface, conf.SigningKey, conf.AccessTokenExp, conf.RefreshTokenExp, conf.AuthCodeExp)
+	oauthWorkflow := core.NewOAuthWorkflow(clientInterface, userInterface, conf.SigningKey, conf.AccessTokenExp, conf.RefreshTokenExp, conf.AuthCodeExp)
 
 	loginUC := core.NewLoginUseCase(userInterface, tokenInterface, hashInterface, conf.SessionExp)
 	registerUC := core.NewRegisterUseCase(userInterface, tokenInterface, hashInterface, conf.SessionExp)

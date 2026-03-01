@@ -1,9 +1,10 @@
 package core
 
 import (
-	"github.com/ory/fosite"
 	"slices"
 	"time"
+
+	"github.com/ory/fosite"
 )
 
 // all clients are confidential by now
@@ -15,6 +16,7 @@ type Client struct {
 	RedirectURIs []string
 	Public       bool
 	Status       string
+	Scopes       []string
 	CreatedAt    time.Time
 }
 
@@ -43,7 +45,7 @@ func (c *Client) GetResponseTypes() fosite.Arguments {
 }
 
 func (c *Client) GetScopes() fosite.Arguments {
-	return nil
+	return c.Scopes
 }
 
 func (c *Client) IsPublic() bool {

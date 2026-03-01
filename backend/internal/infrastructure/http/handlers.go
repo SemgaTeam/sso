@@ -9,6 +9,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -207,6 +208,50 @@ func currentUserHandler(userUC *core.UserUseCase) echo.HandlerFunc {
 		}
 
 		return c.JSON(http.StatusOK, user)
+	}
+}
+
+func userInfoHandler(oauthWorkflow *core.OAuthWorkflow, userUC *core.UserUseCase) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.Request().Context()
+
+		authorization := c.Request().Header.Get("Authorization")
+		if authorization == "" {
+			return c.JSON(http.StatusUnauthorized, map[string]string{
+				"error": "missing authorization header",
+			})
+		}
+
+		token := strings.TrimSpace(strings.TrimPrefix(authorization, "Bearer "))
+		if token == "" || token == authorization {
+			return c.JSON(http.StatusUnauthorized, map[string]string{
+				"error": "invalid bearer token",
+			})
+		}
+
+		subject, err := oauthWorkflow.SubjectByAccessToken(ctx, token)
+		if err != nil {
+			return c.JSON(http.StatusUnauthorized, map[string]string{
+				"error": "invalid access token",
+			})
+		}
+
+		user, err := userUC.Get(ctx, subject, "")
+		if err != nil {
+			return err
+		}
+		if user == nil {
+			return c.JSON(http.StatusUnauthorized, map[string]string{
+				"error": "user not found",
+			})
+		}
+
+		return c.JSON(http.StatusOK, map[string]any{
+			"sub":    user.ID,
+			"name":   user.Name,
+			"email":  user.Email,
+			"status": user.Status,
+		})
 	}
 }
 

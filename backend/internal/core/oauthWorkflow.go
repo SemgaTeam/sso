@@ -2,6 +2,7 @@ package core
 
 import (
 	"crypto/sha256"
+	"errors"
 	"sync"
 
 	"github.com/ory/fosite"
@@ -88,6 +89,25 @@ func (w *OAuthWorkflow) WriteAccessResponse(ctx context.Context, req *http.Reque
 
 	w.oauth2.WriteAccessResponse(ctx, rw, ar, resp)
 	return nil
+}
+
+func (w *OAuthWorkflow) SubjectByAccessToken(ctx context.Context, token string) (string, error) {
+	_, requester, err := w.oauth2.IntrospectToken(ctx, token, fosite.AccessToken, new(fosite.DefaultSession))
+	if err != nil {
+		return "", err
+	}
+
+	session := requester.GetSession()
+	if session == nil {
+		return "", errors.New("token session is missing")
+	}
+
+	subject := session.GetSubject()
+	if subject == "" {
+		return "", errors.New("token subject is missing")
+	}
+
+	return subject, nil
 }
 
 type oauthStorage struct {

@@ -1,17 +1,12 @@
 import { useEffect, useState } from "react";
 
 type Credential = {
-  ID: string;
-  IdentityID: string;
   Type: string;
-  Hash: string;
   Status: string;
   CreatedAt: string;
 };
 
 type Identity = {
-  ID: string;
-  UserID: string;
   Type: string;
   ExternalID: string;
   Issuer: string;

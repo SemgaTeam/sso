@@ -7,9 +7,24 @@ import (
 
 	"errors"
 	"net/http"
+	"time"
 )
 
-func loginHandler(loginUC *core.LoginUseCase) echo.HandlerFunc {
+func setSessionCookie(c echo.Context, token string, sessionExp int) {
+	cookie := new(http.Cookie)
+	cookie.Name = "sso_session_token"
+	cookie.Value = token
+	cookie.Path = "/"
+	cookie.HttpOnly = true
+	cookie.Secure = true
+	cookie.SameSite = http.SameSiteLaxMode
+	cookie.MaxAge = sessionExp
+	cookie.Expires = time.Now().Add(time.Duration(sessionExp) * time.Second)
+
+	c.SetCookie(cookie)
+}
+
+func loginHandler(loginUC *core.LoginUseCase, sessionExp int) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 		params := c.QueryParams()
@@ -56,13 +71,12 @@ func loginHandler(loginUC *core.LoginUseCase) echo.HandlerFunc {
 			return err
 		}
 
-		return c.JSON(http.StatusOK, map[string]any{
-			"sso_session_token": token,
-		})
+		setSessionCookie(c, token, sessionExp)
+		return c.NoContent(http.StatusOK)
 	}
 }
 
-func registerHandler(registerUC *core.RegisterUseCase) echo.HandlerFunc {
+func registerHandler(registerUC *core.RegisterUseCase, sessionExp int) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 		params := c.QueryParams()
@@ -113,9 +127,8 @@ func registerHandler(registerUC *core.RegisterUseCase) echo.HandlerFunc {
 			return err
 		}
 
-		return c.JSON(http.StatusOK, map[string]any{
-			"sso_session_token": token,
-		})
+		setSessionCookie(c, token, sessionExp)
+		return c.NoContent(http.StatusOK)
 	}
 }
 

@@ -25,8 +25,8 @@ func SetupHandlers(conf *config.Config, e *echo.Echo, baseLogger *zap.Logger, us
 	initMiddleware(e, baseLogger)
 
 	auth := e.Group("/auth")
-	auth.POST("/login", loginHandler(loginUC))
-	auth.POST("/register", registerHandler(registerUC))
+	auth.POST("/login", loginHandler(loginUC, conf.SessionExp))
+	auth.POST("/register", registerHandler(registerUC, conf.SessionExp))
 	auth.POST("/token", oauthHandler(oauthWorkflow), tokenMiddleware)
 
 	e.GET("/.well-known/jwks.json", jwksHandler(jwksUC))

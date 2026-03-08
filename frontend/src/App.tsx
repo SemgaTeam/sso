@@ -1,5 +1,6 @@
 import { Link, Navigate, Route, Routes } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
+import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPage";
 
 function App() {
@@ -10,6 +11,7 @@ function App() {
         <nav className="nav">
           <Link to="/login">Login</Link>
           <Link to="/register">Register</Link>
+          <Link to="/profile">Profile</Link>
         </nav>
       </header>
       <main className="main">
@@ -17,6 +19,7 @@ function App() {
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
         </Routes>
       </main>
     </div>

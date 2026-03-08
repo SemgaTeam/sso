@@ -166,6 +166,31 @@ func oauthHandler(oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
 	}
 }
 
+func currentUserHandler(userUC *core.UserUseCase) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.Request().Context()
+
+		token, ok := c.Get("sso_session_token").(*jwt.Token)
+		if !ok {
+			return c.JSON(http.StatusUnauthorized, map[string]any{
+				"error": "unauthorized",
+			})
+		}
+
+		userID, err := token.Claims.GetSubject()
+		if err != nil {
+			return err
+		}
+
+		user, err := userUC.Get(ctx, userID, "")
+		if err != nil {
+			return err
+		}
+
+		return c.JSON(http.StatusOK, user)
+	}
+}
+
 func jwksHandler(jwksUC *core.GetPublicKeysUseCase) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()

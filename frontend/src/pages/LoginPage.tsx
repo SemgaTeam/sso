@@ -1,8 +1,10 @@
 import { FormEvent, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const loginUrl = import.meta.env.VITE_AUTH_LOGIN_URL;
 
 function LoginPage() {
+  const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -16,16 +18,19 @@ function LoginPage() {
     try {
       const response = await fetch(loginUrl, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password }),
       });
 
-      const data = (await response.json()) as { error?: string; sso_session_token?: string };
       if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as { error?: string };
         throw new Error(data.error ?? "Login failed");
       }
+
+      navigate("/profile");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     }

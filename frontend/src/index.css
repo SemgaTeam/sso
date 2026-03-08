@@ -54,6 +54,21 @@ body {
   box-shadow: 0 10px 28px rgba(17, 24, 39, 0.08);
 }
 
+.profile-card {
+  width: min(760px, 100%);
+}
+
+.profile-card pre {
+  margin: 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: #0b1220;
+  color: #e5e7eb;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .card h2 {
   margin-top: 0;
 }

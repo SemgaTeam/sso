@@ -1,8 +1,10 @@
 import { FormEvent, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const registerUrl = import.meta.env.VITE_AUTH_REGISTER_URL;
 
 function RegisterPage() {
+  const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -23,17 +25,19 @@ function RegisterPage() {
     try {
       const response = await fetch(registerUrl, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ name, email, password }),
       });
 
-      const data = (await response.json()) as { error?: string; };
       if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as { error?: string };
         throw new Error(data.error ?? "Register failed");
       }
 
+      navigate("/profile");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Register failed");
     }

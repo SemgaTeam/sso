@@ -217,7 +217,6 @@ func userInfoHandler(oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 
-		// TODO: pick token from cookie
 		authorization := c.Request().Header.Get("Authorization")
 		if authorization == "" {
 			return c.JSON(http.StatusUnauthorized, map[string]string{

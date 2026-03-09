@@ -120,10 +120,11 @@ func (w *OAuthWorkflow) WriteAccessResponse(ctx context.Context, req *http.Reque
 	return nil
 }
 
-func (w *OAuthWorkflow) AccessTokenInfoByToken(ctx context.Context, token string) (*AccessTokenInfo, error) {
+func (w *OAuthWorkflow) AccessTokenInfoByToken(ctx context.Context, rw http.ResponseWriter, token string) (*AccessTokenInfo, error) {
 	_, requester, err := w.oauth2.IntrospectToken(ctx, token, fosite.AccessToken, new(fosite.DefaultSession))
 	if err != nil {
-		return nil, err
+		w.oauth2.WriteIntrospectionError(ctx, rw, err)
+		return nil, nil
 	}
 
 	session := requester.GetSession()
@@ -142,10 +143,14 @@ func (w *OAuthWorkflow) AccessTokenInfoByToken(ctx context.Context, token string
 	}, nil
 }
 
-func (w *OAuthWorkflow) UserInfo(ctx context.Context, token string) (map[string]any, error) {
-	tokenInfo, err := w.AccessTokenInfoByToken(ctx, token)
+func (w *OAuthWorkflow) UserInfo(ctx context.Context, rw http.ResponseWriter, token string) (map[string]any, error) {
+	tokenInfo, err := w.AccessTokenInfoByToken(ctx, rw, token)
 	if err != nil {
 		return nil, err
+	}
+
+	if tokenInfo == nil {
+		return nil, nil
 	}
 
 	response := map[string]any{

@@ -231,12 +231,11 @@ func userInfoHandler(oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
 			})
 		}
 
-		response, err := oauthWorkflow.UserInfo(ctx, token)
+		_, err := oauthWorkflow.UserInfo(ctx, c.Response().Writer, token)
 		if err != nil {
 			return err
 		}
-
-		return c.JSON(http.StatusOK, response)
+		return nil
 	}
 }
 

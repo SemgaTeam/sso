@@ -5,6 +5,7 @@ import (
 	"sso/internal/core"
 	"sso/internal/infrastructure"
 	"sso/internal/infrastructure/http"
+	"sso/internal/infrastructure/oauth"
 	"sso/internal/log"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -60,6 +61,7 @@ func main() {
 	userInterface := infrastructure.NewUserInterface(pool)
 	hashInterface := infrastructure.NewHashInterface(conf.HashCost)
 	keysInterface := infrastructure.NewKeyInterface()
+	oauthInterface := oauth.NewOAuthInterface(clientInterface, conf.SigningKey, conf.AccessTokenExp, conf.RefreshTokenExp, conf.AuthCodeExp)
 
 	log.Log.Info("Initialized interfaces")
 
@@ -70,7 +72,7 @@ func main() {
 	}
 	keysInterface.SavePrivateKey(privateKey)
 
-	oauthWorkflow := core.NewOAuthWorkflow(clientInterface, userInterface, conf.SigningKey, conf.AccessTokenExp, conf.RefreshTokenExp, conf.AuthCodeExp)
+	oauthWorkflow := core.NewOAuthWorkflow(userInterface, oauthInterface)
 
 	loginUC := core.NewLoginUseCase(userInterface, tokenInterface, hashInterface, conf.SessionExp)
 	registerUC := core.NewRegisterUseCase(userInterface, tokenInterface, hashInterface, conf.SessionExp)
@@ -81,7 +83,7 @@ func main() {
 
 	e := echo.New()
 
-	http.SetupHandlers(conf, e, log.Log, userUC, loginUC, registerUC, oauthWorkflow, jwksUC)
+	http.SetupHandlers(conf, e, log.Log, userUC, loginUC, registerUC, oauthWorkflow, oauthInterface, jwksUC)
 
 	log.Log.Info("HTTP handlers setup")
 

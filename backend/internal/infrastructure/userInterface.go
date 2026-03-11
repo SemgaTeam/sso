@@ -1,8 +1,9 @@
 package infrastructure
 
 import (
-	"sso/internal/core"
+	"sso/internal/core/entities"
 	e "sso/internal/core/errors"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -21,13 +22,13 @@ func NewUserInterface(pool *pgxpool.Pool) *UserInterface {
 	}
 }
 
-func (i *UserInterface) ByID(ctx context.Context, id string) (*core.User, error) {
+func (i *UserInterface) ByID(ctx context.Context, id string) (*entities.User, error) {
 	var name string
 	var email string
 	var status string
 
-	err := i.pool.QueryRow(ctx, 
-	"SELECT name, email, status FROM users WHERE id = $1",
+	err := i.pool.QueryRow(ctx,
+		"SELECT name, email, status FROM users WHERE id = $1",
 		id,
 	).Scan(&name, &email, &status)
 	if err != nil {
@@ -38,10 +39,10 @@ func (i *UserInterface) ByID(ctx context.Context, id string) (*core.User, error)
 		}
 	}
 
-	user := core.User{
-		ID: id,
-		Name: name,
-		Email: email,
+	user := entities.User{
+		ID:     id,
+		Name:   name,
+		Email:  email,
 		Status: status,
 	}
 
@@ -52,13 +53,13 @@ func (i *UserInterface) ByID(ctx context.Context, id string) (*core.User, error)
 	return &user, nil
 }
 
-func (i *UserInterface) ByIdentity(ctx context.Context, itype, externalID, issuer string) (*core.User, error) {
+func (i *UserInterface) ByIdentity(ctx context.Context, itype, externalID, issuer string) (*entities.User, error) {
 	var id string
 	var name string
 	var email string
 	var status string
 
-	err := i.pool.QueryRow(ctx, 
+	err := i.pool.QueryRow(ctx,
 		`SELECT u.id, u.name, u.email, u.status 
 		 FROM users u
 		 JOIN identities i ON u.id = i.user_id
@@ -74,10 +75,10 @@ func (i *UserInterface) ByIdentity(ctx context.Context, itype, externalID, issue
 		}
 	}
 
-	user := core.User{
-		ID: id,
-		Name: name,
-		Email: email,
+	user := entities.User{
+		ID:     id,
+		Name:   name,
+		Email:  email,
 		Status: status,
 	}
 
@@ -88,7 +89,7 @@ func (i *UserInterface) ByIdentity(ctx context.Context, itype, externalID, issue
 	return &user, nil
 }
 
-func (i *UserInterface) ByEmail(ctx context.Context, email string) (*core.User, error) {
+func (i *UserInterface) ByEmail(ctx context.Context, email string) (*entities.User, error) {
 	var id string
 	var name string
 	var status string
@@ -106,10 +107,10 @@ func (i *UserInterface) ByEmail(ctx context.Context, email string) (*core.User, 
 		}
 	}
 
-	user := core.User{
-		ID: id,
-		Name: name,
-		Email: email,
+	user := entities.User{
+		ID:     id,
+		Name:   name,
+		Email:  email,
 		Status: status,
 	}
 
@@ -120,13 +121,13 @@ func (i *UserInterface) ByEmail(ctx context.Context, email string) (*core.User, 
 	return &user, nil
 }
 
-func (i *UserInterface) ByName(ctx context.Context, name string) (*core.User, error) {
+func (i *UserInterface) ByName(ctx context.Context, name string) (*entities.User, error) {
 	var id string
 	var email string
 	var status string
 
-	err := i.pool.QueryRow(ctx, 
-	"SELECT id, email, status FROM users WHERE name = $1",
+	err := i.pool.QueryRow(ctx,
+		"SELECT id, email, status FROM users WHERE name = $1",
 		name,
 	).Scan(&id, &email, &status)
 
@@ -138,10 +139,10 @@ func (i *UserInterface) ByName(ctx context.Context, name string) (*core.User, er
 		}
 	}
 
-	user := core.User{
-		ID: id,
-		Name: name,
-		Email: email,
+	user := entities.User{
+		ID:     id,
+		Name:   name,
+		Email:  email,
 		Status: status,
 	}
 
@@ -152,7 +153,7 @@ func (i *UserInterface) ByName(ctx context.Context, name string) (*core.User, er
 	return &user, nil
 }
 
-func (i *UserInterface) Create(ctx context.Context, user *core.User) error {
+func (i *UserInterface) Create(ctx context.Context, user *entities.User) error {
 	var id string
 	err := i.pool.QueryRow(ctx,
 		"INSERT INTO users(name, email) VALUES ($1, $2) RETURNING id",
@@ -174,9 +175,9 @@ func (i *UserInterface) Create(ctx context.Context, user *core.User) error {
 	return nil
 }
 
-func (i *UserInterface) Update(ctx context.Context, user *core.User) error {
-	_, err := i.pool.Exec(ctx, 
-		"UPDATE users SET name = $1, email = $2, status = $3 WHERE id = $4", 
+func (i *UserInterface) Update(ctx context.Context, user *entities.User) error {
+	_, err := i.pool.Exec(ctx,
+		"UPDATE users SET name = $1, email = $2, status = $3 WHERE id = $4",
 		user.Name,
 		user.Email,
 		user.Status,
@@ -195,9 +196,9 @@ func (i *UserInterface) Update(ctx context.Context, user *core.User) error {
 	return nil
 }
 
-func (i *UserInterface) SaveIdentity(ctx context.Context, identity *core.Identity) error {
+func (i *UserInterface) SaveIdentity(ctx context.Context, identity *entities.Identity) error {
 	if identity.ID != "" {
-		_, err := i.pool.Exec(ctx, 
+		_, err := i.pool.Exec(ctx,
 			"UPDATE identities SET user_id = $1, type = $2, external_id = $3, issuer = $4 WHERE id = $5",
 			identity.UserID, identity.Type, identity.ExternalID, identity.Issuer, identity.ID,
 		)
@@ -212,10 +213,10 @@ func (i *UserInterface) SaveIdentity(ctx context.Context, identity *core.Identit
 		}
 
 		return nil
-	} 
+	}
 
 	var id string
-	err := i.pool.QueryRow(ctx, 
+	err := i.pool.QueryRow(ctx,
 		"INSERT INTO identities(user_id, type, external_id, issuer) VALUES ($1, $2, $3, $4) RETURNING id",
 		identity.UserID, identity.Type, identity.ExternalID, identity.Issuer,
 	).Scan(&id)
@@ -234,18 +235,18 @@ func (i *UserInterface) SaveIdentity(ctx context.Context, identity *core.Identit
 	return nil
 }
 
-func (i *UserInterface) SaveCredential(ctx context.Context, credential *core.Credential) error {
-	if credential.ID != "" { 
-		_, err := i.pool.Exec(ctx, 
+func (i *UserInterface) SaveCredential(ctx context.Context, credential *entities.Credential) error {
+	if credential.ID != "" {
+		_, err := i.pool.Exec(ctx,
 			"UPDATE credentials SET hash = $1, status = $2 WHERE id = $3",
 			credential.Hash, credential.Status, credential.ID,
 		)
 
 		return err
-	} 
+	}
 
 	var id string
-	err := i.pool.QueryRow(ctx, 
+	err := i.pool.QueryRow(ctx,
 		"INSERT INTO credentials(identity_id, type, hash) VALUES ($1, $2, $3) RETURNING id",
 		credential.IdentityID, credential.Type, credential.Hash,
 	).Scan(&id)
@@ -264,8 +265,8 @@ func (i *UserInterface) SaveCredential(ctx context.Context, credential *core.Cre
 	return nil
 }
 
-func (i *UserInterface) preload(ctx context.Context, user *core.User) error {
-	identityRows, err := i.pool.Query(ctx, 
+func (i *UserInterface) preload(ctx context.Context, user *entities.User) error {
+	identityRows, err := i.pool.Query(ctx,
 		"SELECT id, type, external_id, issuer, created_at FROM identities WHERE user_id = $1",
 		user.ID,
 	)
@@ -279,7 +280,7 @@ func (i *UserInterface) preload(ctx context.Context, user *core.User) error {
 	defer identityRows.Close()
 
 	for identityRows.Next() {
-		var identity core.Identity
+		var identity entities.Identity
 
 		err := identityRows.Scan(&identity.ID, &identity.Type, &identity.ExternalID, &identity.Issuer, &identity.CreatedAt)
 
@@ -287,7 +288,7 @@ func (i *UserInterface) preload(ctx context.Context, user *core.User) error {
 			return e.Unknown(err)
 		}
 
-		credentialRows, err := i.pool.Query(ctx, 
+		credentialRows, err := i.pool.Query(ctx,
 			"SELECT id, type, hash, status, created_at FROM credentials WHERE identity_id = $1",
 			identity.ID,
 		)
@@ -302,7 +303,7 @@ func (i *UserInterface) preload(ctx context.Context, user *core.User) error {
 		defer credentialRows.Close()
 
 		for credentialRows.Next() {
-			var cred core.Credential
+			var cred entities.Credential
 
 			err := credentialRows.Scan(&cred.ID, &cred.Type, &cred.Hash, &cred.Status, &cred.CreatedAt)
 

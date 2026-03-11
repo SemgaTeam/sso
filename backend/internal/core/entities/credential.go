@@ -1,14 +1,14 @@
-package core
+package entities
 
 import "time"
 
 type Credential struct {
-	ID string
+	ID         string
 	IdentityID string
-	Type string
-	Hash string
-	Status string
-	CreatedAt time.Time
+	Type       string
+	Hash       string
+	Status     string
+	CreatedAt  time.Time
 }
 
 func NewCredential(ctype string, hash string) (*Credential, error) {

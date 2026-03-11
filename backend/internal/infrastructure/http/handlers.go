@@ -2,6 +2,7 @@ package http
 
 import (
 	"sso/internal/core"
+	i "sso/internal/core/interfaces"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
@@ -135,7 +136,7 @@ func registerHandler(registerUC *core.RegisterUseCase, sessionExp int) echo.Hand
 	}
 }
 
-func oauthHandler(oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
+func oauthHandler(oauth i.IOAuth) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 
@@ -172,15 +173,15 @@ func oauthHandler(oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
 			"scope":         {request["scope"]},
 		}.Encode()
 
-		return oauthWorkflow.WriteAuthorizeResponse(ctx, req, c.Response().Writer, userID)
+		return oauth.HandleAuthorize(ctx, req, c.Response().Writer, userID)
 	}
 }
 
-func oauthTokenHandler(oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
+func oauthTokenHandler(oauth i.IOAuth) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 
-		if err := oauthWorkflow.WriteAccessResponse(ctx, c.Request(), c.Response().Writer); err != nil {
+		if err := oauth.HandleAccess(ctx, c.Request(), c.Response().Writer); err != nil {
 			return err
 		}
 
@@ -213,7 +214,7 @@ func currentUserHandler(userUC *core.UserUseCase) echo.HandlerFunc {
 	}
 }
 
-func userInfoHandler(oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
+func userInfoHandler(oauthInterface i.IOAuth, oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 
@@ -231,11 +232,21 @@ func userInfoHandler(oauthWorkflow *core.OAuthWorkflow) echo.HandlerFunc {
 			})
 		}
 
-		_, err := oauthWorkflow.UserInfo(ctx, c.Response().Writer, token)
+		tokenInfo, err := oauthInterface.IntrospectAccessToken(ctx, c.Response().Writer, token)
 		if err != nil {
 			return err
 		}
-		return nil
+
+		if tokenInfo == nil {
+			return errors.New("token info is empty")
+		}
+
+		response, err := oauthWorkflow.UserInfo(ctx, *tokenInfo)
+		if err != nil {
+			return err
+		}
+
+		return c.JSON(http.StatusOK, response)
 	}
 }
 

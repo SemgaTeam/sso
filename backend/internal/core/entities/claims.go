@@ -1,4 +1,4 @@
-package core
+package entities
 
 import (
 	"github.com/golang-jwt/jwt/v5"
@@ -14,14 +14,14 @@ type Claims struct {
 func NewClaims(clientID, userID string, expiration int) (*Claims, error) {
 	expiresAt := jwt.NewNumericDate(
 		time.Now().Add(
-			time.Duration(expiration)*time.Second,
+			time.Duration(expiration) * time.Second,
 		),
 	)
 
 	return &Claims{
 		ClientID: clientID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Subject: userID,
+			Subject:   userID,
 			ExpiresAt: expiresAt,
 		},
 	}, nil

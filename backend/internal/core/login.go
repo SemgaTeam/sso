@@ -1,7 +1,10 @@
 package core
 
 import (
+	"sso/internal/core/entities"
 	e "sso/internal/core/errors"
+	i "sso/internal/core/interfaces"
+
 	"github.com/golang-jwt/jwt/v5"
 	"go.uber.org/zap"
 
@@ -10,13 +13,13 @@ import (
 )
 
 type LoginUseCase struct {
-	user IUser
-	token IToken
-	hash IHash
+	user       i.IUser
+	token      i.IToken
+	hash       i.IHash
 	sessionExp int
 }
 
-func NewLoginUseCase(user IUser, token IToken, hash IHash, sessionExp int) *LoginUseCase {
+func NewLoginUseCase(user i.IUser, token i.IToken, hash i.IHash, sessionExp int) *LoginUseCase {
 	return &LoginUseCase{
 		user,
 		token,
@@ -28,23 +31,23 @@ func NewLoginUseCase(user IUser, token IToken, hash IHash, sessionExp int) *Logi
 type LoginInput struct {
 	Provider string
 
-	Email string
+	Email    string
 	Password string
 
 	ExternalID string
-	Token map[string]string
-	Issuer string
+	Token      map[string]string
+	Issuer     string
 }
 
 func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInput) (string, error) {
 	log := getLoggerFromContext(ctx)
 
-	var user *User
+	var user *entities.User
 	var err error
 
 	switch input.Provider {
 	case "email":
-		user, err = uc.loginByEmail(ctx, input)	
+		user, err = uc.loginByEmail(ctx, input)
 	case "oauth":
 		token := input.Token
 		email := token["email"]
@@ -63,13 +66,13 @@ func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInput) (string, 
 	}
 
 	issuedAt := jwt.NewNumericDate(time.Now())
-	expiresAt := jwt.NewNumericDate(time.Now().Add(time.Duration(uc.sessionExp)*time.Second))
+	expiresAt := jwt.NewNumericDate(time.Now().Add(time.Duration(uc.sessionExp) * time.Second))
 
-	claims := Claims{
+	claims := entities.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			Subject: user.ID,
-			Issuer: "sso.semgateam.ru",
-			IssuedAt: issuedAt,
+			Subject:   user.ID,
+			Issuer:    "sso.semgateam.ru",
+			IssuedAt:  issuedAt,
 			ExpiresAt: expiresAt,
 		},
 	}
@@ -79,7 +82,7 @@ func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInput) (string, 
 	return ssoSessionToken, err
 }
 
-func (uc *LoginUseCase) loginByEmail(ctx context.Context, input LoginInput) (*User, error) {
+func (uc *LoginUseCase) loginByEmail(ctx context.Context, input LoginInput) (*entities.User, error) {
 	log := getLoggerFromContext(ctx)
 
 	user, err := uc.user.ByEmail(ctx, input.Email)
@@ -88,7 +91,7 @@ func (uc *LoginUseCase) loginByEmail(ctx context.Context, input LoginInput) (*Us
 		return nil, err
 	}
 
-	var emailIdentity *Identity
+	var emailIdentity *entities.Identity
 	for _, id := range user.Identities {
 		if id.Type == "email" {
 			emailIdentity = &id
@@ -101,7 +104,7 @@ func (uc *LoginUseCase) loginByEmail(ctx context.Context, input LoginInput) (*Us
 		return nil, e.IdentityNotFound
 	}
 
-	var passwordCred *Credential
+	var passwordCred *entities.Credential
 	for _, cred := range emailIdentity.Credentials {
 		if cred.Type == "password" {
 			passwordCred = &cred

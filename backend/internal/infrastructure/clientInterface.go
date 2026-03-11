@@ -1,7 +1,7 @@
 package infrastructure
 
 import (
-	"sso/internal/core"
+	"sso/internal/core/entities"
 	e "sso/internal/core/errors"
 
 	"github.com/jackc/pgx/v5"
@@ -22,7 +22,7 @@ func NewClientInterface(pool *pgxpool.Pool) *ClientInterface {
 	}
 }
 
-func (i *ClientInterface) ByID(ctx context.Context, clientID string) (*core.Client, error) {
+func (i *ClientInterface) ByID(ctx context.Context, clientID string) (*entities.Client, error) {
 	var id, cid, name, status string
 	var redirectURIs []string
 	var scopes []string
@@ -42,7 +42,7 @@ func (i *ClientInterface) ByID(ctx context.Context, clientID string) (*core.Clie
 		}
 	}
 
-	client := core.Client{
+	client := entities.Client{
 		ID:           id,
 		ClientID:     cid,
 		Name:         name,

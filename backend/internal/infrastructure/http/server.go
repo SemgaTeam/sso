@@ -4,6 +4,7 @@ import (
 	"sso/internal/config"
 	"sso/internal/core"
 	e "sso/internal/core/errors"
+	i "sso/internal/core/interfaces"
 
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
@@ -15,7 +16,17 @@ import (
 	"fmt"
 )
 
-func SetupHandlers(conf *config.Config, e *echo.Echo, baseLogger *zap.Logger, userUC *core.UserUseCase, loginUC *core.LoginUseCase, registerUC *core.RegisterUseCase, oauthWorkflow *core.OAuthWorkflow, jwksUC *core.GetPublicKeysUseCase) {
+func SetupHandlers(
+	conf *config.Config,
+	e *echo.Echo,
+	baseLogger *zap.Logger,
+	userUC *core.UserUseCase,
+	loginUC *core.LoginUseCase,
+	registerUC *core.RegisterUseCase,
+	oauthWorkflow *core.OAuthWorkflow,
+	oauthInterface i.IOAuth,
+	jwksUC *core.GetPublicKeysUseCase,
+) {
 	tokenMiddleware := echojwt.WithConfig(echojwt.Config{
 		SigningKey:    []byte(conf.SigningKey),
 		TokenLookup:   "cookie:sso_session_token",
@@ -31,9 +42,9 @@ func SetupHandlers(conf *config.Config, e *echo.Echo, baseLogger *zap.Logger, us
 	auth.GET("/me", currentUserHandler(userUC), tokenMiddleware)
 
 	oauth := e.Group("/oauth2")
-	oauth.GET("/auth", oauthHandler(oauthWorkflow), tokenMiddleware)
-	oauth.POST("/token", oauthTokenHandler(oauthWorkflow))
-	oauth.GET("/userinfo", userInfoHandler(oauthWorkflow))
+	oauth.GET("/auth", oauthHandler(oauthInterface), tokenMiddleware)
+	oauth.POST("/token", oauthTokenHandler(oauthInterface))
+	oauth.GET("/userinfo", userInfoHandler(oauthInterface, oauthWorkflow))
 
 	e.GET("/.well-known/jwks.json", jwksHandler(jwksUC))
 }

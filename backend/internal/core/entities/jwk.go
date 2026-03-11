@@ -1,4 +1,4 @@
-package core
+package entities
 
 type JWK struct {
 	Kty string `json:"kty"`

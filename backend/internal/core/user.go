@@ -1,76 +1,24 @@
 package core
 
 import (
-	e "sso/internal/core/errors"
+	e "sso/internal/core/entities"
+	i "sso/internal/core/interfaces"
 
 	"context"
 )
 
-type User struct {
-	ID string `json:"id"`
-	Name string `json:"name"`
-	Email string `json:"email"`
-	Status string `json:"status"`
-	Identities []Identity
-}
-
-func NewUser(name, email string) (*User, error) {
-	if name == "" || email == "" {
-		return nil, e.InvalidNameOrEmail
-	}
-
-	return &User{
-		Name: name,
-		Email: email,
-		Status: "active",
-	}, nil
-}
-
-func (u *User) CanLogin() bool {
-	if u.Status == "deleted" || u.Status == "blocked" {
-		return false
-	}
-	 
-	return true
-}
-
-func (u *User) Update(name, email string) error {
-	if u.Status == "deleted" {
-		return e.UserCannotBeUpdated
-	}
-
-	if name == "" || email == "" {
-		return e.InvalidNameOrEmail
-	}
-
-	u.Name = name
-	u.Email = email
-
-	return nil
-}
-
-func (u *User) Delete() error {
-	if u.Status == "deleted" {
-		return nil
-	}
-
-	u.Status = "deleted"
-
-	return nil
-}
-
 type UserUseCase struct {
-	user IUser
+	user i.IUser
 }
 
-func NewUserUseCase(user IUser) *UserUseCase {
+func NewUserUseCase(user i.IUser) *UserUseCase {
 	return &UserUseCase{
 		user,
 	}
 }
 
-func (uc *UserUseCase) Get(ctx context.Context, id, name string) (*User, error) {
-	var response *User
+func (uc *UserUseCase) Get(ctx context.Context, id, name string) (*e.User, error) {
+	var response *e.User
 
 	if id != "" {
 		user, err := uc.user.ByID(ctx, id)
@@ -91,14 +39,14 @@ func (uc *UserUseCase) Get(ctx context.Context, id, name string) (*User, error) 
 	return response, nil
 }
 
-func (uc *UserUseCase) Create(ctx context.Context, name, email string) (*User, error) {
-	user, err := NewUser(name, email)
+func (uc *UserUseCase) Create(ctx context.Context, name, email string) (*e.User, error) {
+	user, err := e.NewUser(name, email)
 	if err != nil {
 		return nil, err
 	}
 
-	err = uc.user.Create(ctx, user)	
-	if err != nil{
+	err = uc.user.Create(ctx, user)
+	if err != nil {
 		return nil, err
 	}
 

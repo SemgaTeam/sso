@@ -1,13 +1,14 @@
 package infrastructure
 
 import (
-	"sso/internal/core"
+	"sso/internal/core/entities"
 	e "sso/internal/core/errors"
+
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type TokenInterface struct {
-	signingKey string
+	signingKey    string
 	signingMethod jwt.SigningMethod
 }
 
@@ -18,9 +19,9 @@ func NewTokenInterface(signingKey string, signingMethod jwt.SigningMethod) *Toke
 	}
 }
 
-func (i *TokenInterface) Generate(claims *core.Claims) (string, error) {
+func (i *TokenInterface) Generate(claims *entities.Claims) (string, error) {
 	token := jwt.NewWithClaims(i.signingMethod, claims)
-	signedStr, err := token.SignedString([]byte(i.signingKey)) 
+	signedStr, err := token.SignedString([]byte(i.signingKey))
 	if err != nil {
 		return "", e.Unknown(err)
 	}
@@ -28,7 +29,7 @@ func (i *TokenInterface) Generate(claims *core.Claims) (string, error) {
 	return signedStr, nil
 }
 
-func (i *TokenInterface) SignWithKey(claims *core.Claims, key core.PrivateKey) (string, error) {
+func (i *TokenInterface) SignWithKey(claims *entities.Claims, key entities.PrivateKey) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 
 	signed, err := token.SignedString(&key.Value)

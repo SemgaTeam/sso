@@ -37,6 +37,7 @@ func NewOAuthInterface(clientInterface i.IClient, globalSecret string, accessExp
 		cfg,
 		storage,
 		compose.NewOAuth2HMACStrategy(cfg),
+		compose.OAuth2TokenIntrospectionFactory,
 		compose.OAuth2AuthorizeExplicitFactory,
 		compose.OAuth2RefreshTokenGrantFactory,
 	)

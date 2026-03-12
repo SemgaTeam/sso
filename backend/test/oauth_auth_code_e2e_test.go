@@ -144,7 +144,7 @@ func startServer(ctx context.Context, t *testing.T, pgURL string) (*exec.Cmd, *b
 		t.Fatalf("failed to create logs dir: %v", err)
 	}
 
-	cmd := exec.CommandContext(ctx, "go", "run", ".")
+	cmd := exec.CommandContext(ctx, "./app")
 	cmd.Dir = backendDir
 	cmd.Env = append(os.Environ(),
 		"POSTGRES_URL="+pgURL,

@@ -97,7 +97,7 @@ func (w *OAuthInterface) HandleAuthorize(ctx context.Context, req *http.Request,
 	return nil
 }
 
-func (w *OAuthInterface) HandleAccess(ctx context.Context, req *http.Request, rw http.ResponseWriter) error {
+func (w *OAuthInterface) HandleToken(ctx context.Context, req *http.Request, rw http.ResponseWriter) error {
 	ar, err := w.oauth2.NewAccessRequest(ctx, req, new(fosite.DefaultSession))
 	if err != nil {
 		w.oauth2.WriteAccessError(ctx, rw, ar, err)

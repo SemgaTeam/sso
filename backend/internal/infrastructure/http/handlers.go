@@ -181,7 +181,7 @@ func oauthTokenHandler(oauth i.IOAuth) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 
-		if err := oauth.HandleAccess(ctx, c.Request(), c.Response().Writer); err != nil {
+		if err := oauth.HandleToken(ctx, c.Request(), c.Response().Writer); err != nil {
 			return err
 		}
 

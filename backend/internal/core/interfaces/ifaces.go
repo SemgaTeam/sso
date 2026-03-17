@@ -26,7 +26,7 @@ type IClient interface {
 
 type IOAuth interface {
 	HandleAuthorize(ctx context.Context, req *http.Request, rw http.ResponseWriter, userID string) error
-	HandleAccess(ctx context.Context, req *http.Request, rw http.ResponseWriter) error
+	HandleToken(ctx context.Context, req *http.Request, rw http.ResponseWriter) error
 	IntrospectAccessToken(ctx context.Context, rw http.ResponseWriter, token string) (*entities.AccessTokenInfo, error)
 }
 

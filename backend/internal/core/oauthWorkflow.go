@@ -5,7 +5,6 @@ import (
 	i "sso/internal/core/interfaces"
 
 	"context"
-	"crypto/sha256"
 	"errors"
 )
 
@@ -25,16 +24,6 @@ func NewOAuthWorkflow(userInterface i.IUser, oauthInterface i.IOAuth) *OAuthWork
 			"status":  {},
 		},
 	}
-}
-
-func normalizeGlobalSecret(secret string) []byte {
-	raw := []byte(secret)
-	if len(raw) >= 32 {
-		return raw
-	}
-
-	sum := sha256.Sum256(raw)
-	return sum[:]
 }
 
 func (w *OAuthWorkflow) UserInfo(ctx context.Context, tokenInfo entities.AccessTokenInfo) (map[string]any, error) {
